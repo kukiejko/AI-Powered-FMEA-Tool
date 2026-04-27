@@ -7,16 +7,57 @@ var SUPABASE_URL = 'https://eyzbfylsbicoeoszcxfs.supabase.co';
 var SUPABASE_KEY = 'sb_publishable_dbjWjVoJnaCCO2qdqjvaDA_iSTriMEb';
 
 // Initialize Supabase Client
-var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var supabase = null;
+
+// Wait for Supabase library to load
+var waitForSupabase = function() {
+  if (typeof window.supabase !== 'undefined' && typeof window.supabase.createClient === 'function') {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    console.log('✅ Supabase client initialized');
+    return true;
+  }
+  return false;
+};
+
+// Try to initialize immediately
+if (!waitForSupabase()) {
+  // If not ready, wait for it
+  var checkInterval = setInterval(function() {
+    if (waitForSupabase()) {
+      clearInterval(checkInterval);
+    }
+  }, 100);
+
+  // Timeout after 5 seconds
+  setTimeout(function() {
+    if (!supabase) {
+      console.error('❌ Supabase library failed to load after 5 seconds');
+      clearInterval(checkInterval);
+    }
+  }, 5000);
+}
 
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
+// Helper to ensure Supabase is ready
+var ensureSupabaseReady = function() {
+  if (!supabase) {
+    throw new Error('Supabase client not initialized. Please wait for the library to load.');
+  }
+};
+
 // Get current authenticated user
 window.getCurrentUser = async function() {
-  var session = await supabase.auth.getSession();
-  return session.data.session ? session.data.session.user : null;
+  if (!supabase) return null;
+  try {
+    var session = await supabase.auth.getSession();
+    return session.data.session ? session.data.session.user : null;
+  } catch (err) {
+    console.error('Error getting current user:', err);
+    return null;
+  }
 };
 
 // Get current user ID (UUID from auth.users)
@@ -33,6 +74,7 @@ window.isUserAuthenticated = async function() {
 
 // Sign up new user with email and password
 window.signupWithEmail = async function(email, password) {
+  ensureSupabaseReady();
   try {
     var response = await supabase.auth.signUp({
       email: email,
@@ -52,6 +94,7 @@ window.signupWithEmail = async function(email, password) {
 
 // Sign in with email and password
 window.loginWithEmail = async function(email, password) {
+  ensureSupabaseReady();
   try {
     var response = await supabase.auth.signInWithPassword({
       email: email,
@@ -71,6 +114,7 @@ window.loginWithEmail = async function(email, password) {
 
 // Sign out current user
 window.signOutUser = async function() {
+  if (!supabase) return true;
   try {
     var response = await supabase.auth.signOut();
 
@@ -87,12 +131,22 @@ window.signOutUser = async function() {
 
 // Get user session
 window.getSession = async function() {
-  var response = await supabase.auth.getSession();
-  return response.data.session;
+  if (!supabase) return null;
+  try {
+    var response = await supabase.auth.getSession();
+    return response.data.session;
+  } catch (err) {
+    console.error('Error getting session:', err);
+    return null;
+  }
 };
 
 // Listen for auth changes (login/logout)
 window.onAuthStateChanged = function(callback) {
+  if (!supabase) {
+    console.warn('Supabase not ready for auth state changes');
+    return;
+  }
   supabase.auth.onAuthStateChange(function(event, session) {
     callback(event, session);
   });
@@ -104,6 +158,10 @@ window.onAuthStateChanged = function(callback) {
 
 // Query helper - insert/update/delete with error handling
 window.supabaseQuery = async function(operation) {
+  if (!supabase) {
+    console.error('Supabase not ready');
+    return null;
+  }
   try {
     var result = await operation;
 
@@ -121,6 +179,10 @@ window.supabaseQuery = async function(operation) {
 
 // Get from Supabase with error handling
 window.supabaseGet = async function(query) {
+  if (!supabase) {
+    console.error('Supabase not ready');
+    return null;
+  }
   try {
     var result = await query;
 
