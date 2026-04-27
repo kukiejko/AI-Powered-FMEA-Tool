@@ -9,49 +9,24 @@ var SUPABASE_KEY = 'sb_publishable_dbjWjVoJnaCCO2qdqjvaDA_iSTriMEb';
 // Initialize Supabase Client
 var supabase = null;
 
-// Wait for Supabase library to load
-var initSupabase = function() {
-  // Check for window.supabase.createClient (newer versions)
-  if (window.supabase && typeof window.supabase.createClient === 'function') {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    console.log('✅ Supabase client initialized');
-    return true;
-  }
-  // Check for supabaseClient or other global
-  if (typeof supabaseClient !== 'undefined') {
-    supabase = supabaseClient;
-    console.log('✅ Supabase client initialized (global)');
-    return true;
-  }
-  return false;
-};
-
-// Try initialization on DOM ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', function() {
-    var attempts = 0;
-    var checkInterval = setInterval(function() {
-      if (initSupabase()) {
-        clearInterval(checkInterval);
-      }
-      attempts++;
-      if (attempts > 50) { // 5 second timeout
-        clearInterval(checkInterval);
-        console.error('❌ Supabase library failed to load');
-      }
-    }, 100);
-  });
+// Initialize immediately - library should be loaded by now
+if (window.supabase && typeof window.supabase.createClient === 'function') {
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  console.log('✅ Supabase client initialized');
 } else {
-  // DOM already loaded
-  var attempts = 0;
+  console.error('❌ Supabase library not found on window.supabase');
+  // Try to initialize on window.supabase becoming available
+  var checkCount = 0;
   var checkInterval = setInterval(function() {
-    if (initSupabase()) {
+    if (window.supabase && typeof window.supabase.createClient === 'function') {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      console.log('✅ Supabase client initialized (delayed)');
       clearInterval(checkInterval);
     }
-    attempts++;
-    if (attempts > 50) {
+    checkCount++;
+    if (checkCount > 50) {
       clearInterval(checkInterval);
-      console.error('❌ Supabase library failed to load');
+      console.error('❌ Supabase library failed to load after 5 seconds');
     }
   }, 100);
 }
@@ -163,9 +138,24 @@ window.getSession = async function() {
 // Listen for auth changes (login/logout)
 window.onAuthStateChanged = function(callback) {
   if (!supabase) {
-    console.warn('Supabase not ready for auth state changes');
+    // Wait for supabase to be ready
+    var checkCount = 0;
+    var checkInterval = setInterval(function() {
+      if (supabase) {
+        clearInterval(checkInterval);
+        supabase.auth.onAuthStateChange(function(event, session) {
+          callback(event, session);
+        });
+      }
+      checkCount++;
+      if (checkCount > 50) {
+        clearInterval(checkInterval);
+        console.error('Supabase not ready - giving up on auth state listener');
+      }
+    }, 100);
     return;
   }
+
   supabase.auth.onAuthStateChange(function(event, session) {
     callback(event, session);
   });
