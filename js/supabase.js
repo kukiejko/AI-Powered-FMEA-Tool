@@ -10,31 +10,50 @@ var SUPABASE_KEY = 'sb_publishable_dbjWjVoJnaCCO2qdqjvaDA_iSTriMEb';
 var supabase = null;
 
 // Wait for Supabase library to load
-var waitForSupabase = function() {
-  if (typeof window.supabase !== 'undefined' && typeof window.supabase.createClient === 'function') {
+var initSupabase = function() {
+  // Check for window.supabase.createClient (newer versions)
+  if (window.supabase && typeof window.supabase.createClient === 'function') {
     supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     console.log('✅ Supabase client initialized');
+    return true;
+  }
+  // Check for supabaseClient or other global
+  if (typeof supabaseClient !== 'undefined') {
+    supabase = supabaseClient;
+    console.log('✅ Supabase client initialized (global)');
     return true;
   }
   return false;
 };
 
-// Try to initialize immediately
-if (!waitForSupabase()) {
-  // If not ready, wait for it
+// Try initialization on DOM ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function() {
+    var attempts = 0;
+    var checkInterval = setInterval(function() {
+      if (initSupabase()) {
+        clearInterval(checkInterval);
+      }
+      attempts++;
+      if (attempts > 50) { // 5 second timeout
+        clearInterval(checkInterval);
+        console.error('❌ Supabase library failed to load');
+      }
+    }, 100);
+  });
+} else {
+  // DOM already loaded
+  var attempts = 0;
   var checkInterval = setInterval(function() {
-    if (waitForSupabase()) {
+    if (initSupabase()) {
       clearInterval(checkInterval);
+    }
+    attempts++;
+    if (attempts > 50) {
+      clearInterval(checkInterval);
+      console.error('❌ Supabase library failed to load');
     }
   }, 100);
-
-  // Timeout after 5 seconds
-  setTimeout(function() {
-    if (!supabase) {
-      console.error('❌ Supabase library failed to load after 5 seconds');
-      clearInterval(checkInterval);
-    }
-  }, 5000);
 }
 
 // ============================================================================
