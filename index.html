@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FMEA Tool</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="resizeLine"></div>
+
+<!-- ═══════════════════════════════════════════════════
+     LOGIN SCREEN
+════════════════════════════════════════════════════ -->
+<div class="screen active" id="screenLogin">
+  <div class="login-bg">
+    <div class="login-card">
+      <div class="login-logo">
+        <svg width="36" height="36" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="6" fill="#1e3a5f"/><path d="M6 8h16M6 14h10M6 20h13" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="21" cy="20" r="4" fill="#48bb78"/><path d="M19.5 20l1 1 2-2" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div>
+          <h1>AI-Powered FMEA Tool</h1>
+          <small>Designed by Andrzej Grzegorczyk</small>
+        </div>
+      </div>
+      <h2>Sign in to continue</h2>
+      <div class="field"><label>Username</label><input type="text" id="loginUser" placeholder="Enter username" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="field"><label>Password</label><input type="password" id="loginPass" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="field">
+        <label>AI Provider <span style="font-size:0.72rem;color:#a0aec0;font-weight:400">(optional)</span></label>
+        <select id="loginProvider" onchange="updateLoginApiKeyUI()" style="width:100%;padding:8px 12px;border:1.5px solid #cbd5e0;border-radius:6px;font-size:0.9rem;background:#fff;cursor:pointer">
+          <option value="claude">Claude (Anthropic)</option>
+          <option value="gemini">Gemini (Google)</option>
+          <option value="groq">Groq</option>
+          <option value="ollama">Ollama (Local)</option>
+        </select>
+      </div>
+      <div class="field" id="loginApiKeyField">
+        <label id="loginApiLabel">API Key <span style="font-size:0.72rem;color:#a0aec0;font-weight:400">(optional — required for AI analysis)</span></label>
+        <div style="position:relative">
+          <input type="password" id="loginApiKey" placeholder="sk-ant-…" style="padding-right:60px" onkeydown="if(event.key==='Enter')doLogin()">
+          <button type="button" onclick="toggleApiKeyVisibility('loginApiKey')" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#718096;font-size:0.75rem;padding:2px 6px;">Show</button>
+        </div>
+        <div id="loginProviderHint" style="font-size:0.72rem;color:#718096;margin-top:4px"></div>
+      </div>
+      <div class="login-err" id="loginErr"></div>
+      <button class="btn-login" onclick="doLogin()">Sign In</button>
+      <div class="login-hint">Default: admin / fmea2024</div>
+
+      <!-- Version & Build Info -->
+      <div style="margin-top:20px;padding:14px;background:rgba(45,106,159,0.2);border:1.5px solid rgba(45,106,159,0.4);border-radius:8px;text-align:center">
+        <div style="font-size:0.9rem;font-weight:600;color:#fff;letter-spacing:0.5px">
+          Version <span id="versionDisplay" style="color:#48bb78;font-family:monospace">-</span>
+        </div>
+        <div style="font-size:0.75rem;color:#cbd5e0;margin-top:6px">
+          Built: <span id="timestampDisplay" style="color:#a0bcd8;font-family:monospace">-</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     DASHBOARD SCREEN
+════════════════════════════════════════════════════ -->
+<div class="screen" id="screenDash">
+  <header>
+    <div class="header-title">
+      <svg width="24" height="24" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="6" fill="rgba(255,255,255,0.15)"/><path d="M6 8h16M6 14h10M6 20h13" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="21" cy="20" r="4" fill="#48bb78"/><path d="M19.5 20l1 1 2-2" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div><h1>AI-Powered FMEA Tool</h1><small>Designed by Andrzej Grzegorczyk</small></div>
+    </div>
+    <div class="header-right">
+      <span class="header-user" id="dashUserLabel"></span>
+      <button class="btn-hdr" onclick="printAllProjectsReport()">📄 All Projects Report</button>
+      <button class="btn-hdr" onclick="doLogout()">Sign Out</button>
+    </div>
+  </header>
+  <div class="dash-main">
+    <div class="dash-toolbar">
+      <h2>📁 My FMEA Projects</h2>
+      <button class="btn btn-primary" onclick="openNewProjectModal()">+ New Project</button>
+    </div>
+    <div id="projGrid" class="proj-grid"></div>
+    <div class="empty-dash" id="emptyDash" style="display:none">
+      <svg width="56" height="56" viewBox="0 0 48 48"><rect x="6" y="4" width="36" height="40" rx="5" fill="#e2e8f0"/><path d="M14 16h20M14 22h12M14 28h15" stroke="#a0aec0" stroke-width="2" stroke-linecap="round"/></svg>
+      <p>No projects yet. Create your first FMEA project!</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     WORKSPACE SCREEN
+════════════════════════════════════════════════════ -->
+<div class="screen" id="screenWork">
+  <header>
+    <div class="header-top-row">
+      <div class="header-title">
+        <svg width="24" height="24" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="6" fill="rgba(255,255,255,0.15)"/><path d="M6 8h16M6 14h10M6 20h13" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="21" cy="20" r="4" fill="#48bb78"/><path d="M19.5 20l1 1 2-2" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div><h1>AI-Powered FMEA Tool</h1><small>Designed by Andrzej Grzegorczyk</small></div>
+      </div>
+      <div class="header-right">
+        <span class="header-user" id="workUserLabel"></span>
+        <button class="btn-hdr" onclick="printProjectReport()">📄 Project Report</button>
+        <button class="btn-hdr" onclick="goToDashboard()">◀ Projects</button>
+        <button class="btn-hdr" onclick="doLogout()">Sign Out</button>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab" id="tab-upload"    onclick="switchTab('upload')">📄 Upload &amp; Analyze</button>
+      <button class="tab" id="tab-fmea"      onclick="switchTab('fmea')">📋 FMEA Worksheet <span class="badge" id="rowBadge">0</span></button>
+      <button class="tab" id="tab-incidents" onclick="switchTab('incidents')">⚠️ Incidents <span class="badge" id="incBadge">0</span></button>
+      <button class="tab" id="tab-guide"     onclick="switchTab('guide')">📊 Guidelines</button>
+    </div>
+  </header>
+
+  <div class="proj-banner">
+    <div>
+      <div class="proj-banner-name" id="bannerName"></div>
+      <div class="proj-banner-desc" id="bannerDesc"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+      <span class="mode-badge" id="modeBadge"></span>
+      <button style="background:rgba(45,106,159,0.12);border:1px solid #bee3f8;color:#2b6cb0;border-radius:6px;padding:3px 10px;font-size:0.74rem;font-weight:600;cursor:pointer" onclick="openProjectSettings()">⚙ Header</button>
+      <div class="proj-banner-save" id="bannerSave"></div>
+    </div>
+  </div>
+
+  <div class="workspace">
+    <div class="ws-main" id="wsMain">
+
+      <!-- Upload Panel -->
+      <div id="panel-upload">
+        <div class="upload-card">
+          <h2>📄 Upload Documents &amp; Generate FMEA</h2>
+          <div class="upload-area" id="dropZone">
+            <svg width="32" height="32" viewBox="0 0 40 40" fill="none"><path d="M20 8v16M13 15l7-7 7 7" stroke="#2d6a9f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 28h24" stroke="#a0bcd8" stroke-width="2" stroke-linecap="round"/></svg>
+            <p><strong>Click to upload</strong> or drag &amp; drop</p>
+            <p>TXT files work best. For PDF — paste the text below instead.</p>
+            <input type="file" id="fileInput" multiple accept=".pdf,.txt,.text" style="display:none">
+          </div>
+          <div class="file-list" id="fileList"></div>
+          <textarea class="doc-textarea" id="manualText" placeholder="Paste your document text here (recommended for PDFs — open the PDF, select all text, copy and paste it here)..." oninput="updateCostEstimator()"></textarea>
+
+          <!-- Document Size Control -->
+          <div style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <label style="font-size:0.78rem;font-weight:600;color:#2d3748">📋 Document Range Control</label>
+              <span id="docSizeInfo" style="font-size:0.75rem;color:#718096"></span>
+            </div>
+
+            <div style="margin-bottom:10px">
+              <label style="font-size:0.73rem;color:#4a5568;margin-bottom:4px;display:block">Skip first N characters:</label>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input type="number" id="docStartChar" min="0" value="0" style="width:100px;padding:6px;border:1px solid #cbd5e0;border-radius:4px;font-size:0.85rem" oninput="updateDocSizeDisplay()">
+                <span style="font-size:0.75rem;color:#718096">(e.g., 0 = start from beginning, 1000 = skip first 1000 chars)</span>
+              </div>
+            </div>
+
+            <div>
+              <label style="font-size:0.73rem;color:#4a5568;margin-bottom:4px;display:block">Maximum characters to analyze:</label>
+              <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+                <input type="range" id="docSizeSlider" min="1000" max="150000" step="1000" value="150000" style="flex:1;cursor:pointer" oninput="updateDocSizeDisplay()">
+                <input type="number" id="docSizeInput" min="1000" max="150000" value="150000" style="width:80px;padding:6px;border:1px solid #cbd5e0;border-radius:4px;font-size:0.85rem" oninput="syncDocSizeInput()">
+                <span style="font-size:0.75rem;color:#718096;white-space:nowrap">chars</span>
+              </div>
+            </div>
+
+            <div style="font-size:0.72rem;color:#4a5568;line-height:1.4">
+              <div id="docRangeInfo" style="background:#fff;border:1px solid #cbd5e0;border-radius:4px;padding:6px 8px;margin-bottom:4px;font-family:monospace;font-size:0.7rem;color:#2d3748"></div>
+              <div id="docSizeWarning" style="display:none;color:#c05621;margin-bottom:4px">⚠️ Document exceeds range limit. Only characters in the specified range will be analyzed.</div>
+              <div>Reduce the limit or increase the start offset if you get "Request Entity Too Large" errors.</div>
+            </div>
+          </div>
+
+          <div class="controls">
+            <button class="btn btn-primary" id="analyzeBtn" onclick="analyze()">🔍 Analyze &amp; Generate FMEA</button>
+            <button class="btn btn-secondary" onclick="addRow();switchTab('fmea')">+ Add Row Manually</button>
+            <button class="btn btn-danger" onclick="clearAll()">🗑 Clear All</button>
+            <span class="status" id="status"></span>
+          </div>
+          <div class="cost-bar" id="costBar">
+            <span class="cost-bar-empty">Add a document above to see estimated token usage and cost.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- FMEA Panel -->
+      <div id="panel-fmea" style="display:none">
+        <div class="table-card">
+          <div class="table-header">
+            <h2>FMEA Worksheet</h2>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              <button class="btn-sm btn-blue"   onclick="addRow()">+ Row</button>
+              <button class="btn-sm btn-green"  onclick="exportCSV()">⬇ CSV</button>
+              <button class="btn-sm btn-orange" onclick="exportJSON()">⬇ JSON</button>
+              <button class="btn-sm btn-purple" onclick="triggerImport()">⬆ Import JSON</button>
+              <input type="file" id="importInput" accept=".json" style="display:none" onchange="importJSON(this)">
+              <div style="width:1px;height:20px;background:rgba(255,255,255,0.2);margin:0 2px"></div>
+              <button class="btn-sm col-toggle" id="toggleCauseBtn"  onclick="toggleColumn('cause')"  title="Show/hide Cause column">Cause ✓</button>
+              <button class="btn-sm col-toggle" id="toggleActionBtn" onclick="toggleColumn('action')" title="Show/hide Action column">Action ✓</button>
+            </div>
+          </div>
+          <div class="search-bar">
+            <div class="search-input-wrap">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6" stroke="#a0aec0" stroke-width="2"/><path d="M13.5 13.5l3 3" stroke="#a0aec0" stroke-width="2" stroke-linecap="round"/></svg>
+              <input type="text" class="search-input" id="searchInput" placeholder="Search failure modes, causes, effects…" oninput="applySearch()">
+            </div>
+            <div class="search-filter-group">
+              <span class="filter-label">RPN:</span>
+              <button class="filter-btn f-all active" data-filter="all"  onclick="setRpnFilter('all')">All</button>
+              <button class="filter-btn f-low"        data-filter="low"  onclick="setRpnFilter('low')">Low &lt;50</button>
+              <button class="filter-btn f-med"        data-filter="med"  onclick="setRpnFilter('med')">Medium 50–99</button>
+              <button class="filter-btn f-high"       data-filter="high" onclick="setRpnFilter('high')">High 100–199</button>
+              <button class="filter-btn f-crit"       data-filter="crit" onclick="setRpnFilter('crit')">Critical ≥200</button>
+            </div>
+            <span class="search-count" id="searchCount"></span>
+            <button class="search-clear" id="searchClearBtn" onclick="clearSearch()" title="Clear search" style="display:none">✕</button>
+          </div>
+          <div class="table-wrap">
+            <table id="fmeaTable"><colgroup id="colGroup"></colgroup><thead><tr id="headerRow"></tr></thead><tbody id="fmeaBody"></tbody></table>
+            <div class="empty-state" id="emptyState">
+              <svg width="42" height="42" viewBox="0 0 48 48"><rect x="8" y="6" width="32" height="36" rx="4" fill="#e2e8f0"/><path d="M16 18h16M16 24h10M16 30h13" stroke="#a0aec0" stroke-width="2" stroke-linecap="round"/></svg>
+              <p>No failure modes yet. Go to <strong>Upload &amp; Analyze</strong> or add a row manually.</p>
+            </div>
+          </div>
+          <div class="legend">
+            <div class="legend-item"><div class="legend-dot rpn-low"></div>RPN &lt;50 Low</div>
+            <div class="legend-item"><div class="legend-dot rpn-med"></div>50–99 Medium</div>
+            <div class="legend-item"><div class="legend-dot rpn-high"></div>100–199 High</div>
+            <div class="legend-item"><div class="legend-dot rpn-critical"></div>≥200 Critical</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Incidents Panel -->
+      <div id="panel-incidents" style="display:none">
+        <div class="table-card" style="border-radius:12px;overflow:hidden">
+          <div class="inc-toolbar">
+            <h2>⚠️ Incident Log</h2>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              <span style="font-size:0.76rem;opacity:0.7" id="incCountLabel"></span>
+              <button class="btn-sm btn-blue" onclick="openIncidentModal()">+ Add Incident</button>
+              <button class="btn-sm btn-green" onclick="exportIncidentsCSV()">⬇ CSV</button>
+              <button class="btn-sm btn-orange" onclick="triggerIncidentImport()">⬆ Import</button>
+              <input type="file" id="incImportInput" accept=".json,.csv" style="display:none" onchange="importIncidents(this)">
+            </div>
+          </div>
+          <div id="incList" class="inc-list">
+            <div class="inc-empty" id="incEmpty">
+              <svg width="42" height="42" viewBox="0 0 48 48"><circle cx="24" cy="24" r="18" fill="#e2e8f0"/><path d="M24 14v12M24 30v2" stroke="#a0aec0" stroke-width="2.5" stroke-linecap="round"/></svg>
+              <p>No incidents recorded. Click <strong>+ Add Incident</strong> to log one.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Guidelines Panel -->
+      <div id="panel-guide" style="display:none">
+
+        <div class="guide-section" style="padding:0;overflow:hidden">
+          <div style="background:#1e3a5f;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+            <h2 style="color:white;font-size:0.95rem;margin:0">📖 User Guide</h2>
+            <div style="display:flex;gap:6px">
+              <button id="help-tab-overview"  class="help-tab help-tab-active" onclick="switchHelpTab('overview')">Overview</button>
+              <button id="help-tab-simple"    class="help-tab" onclick="switchHelpTab('simple')">⚡ Simplified</button>
+              <button id="help-tab-advanced"  class="help-tab" onclick="switchHelpTab('advanced')">🔬 Advanced</button>
+              <button id="help-tab-incidents" class="help-tab" onclick="switchHelpTab('incidents-help')">⚠️ Incidents</button>
+            </div>
+          </div>
+
+          <!-- OVERVIEW -->
+          <div id="help-overview" class="help-panel" style="padding:22px 26px">
+            <div class="help-intro">
+              <p>This tool helps you identify, assess, and track failure modes in your processes or equipment. Choose between two modes when creating a project, based on your team's needs and time available.</p>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:18px 0">
+              <div class="help-card">
+                <div class="help-card-head" style="background:#2d6a9f">⚡ Simplified Mode</div>
+                <div class="help-card-body">
+                  <p>Best for quick risk assessments, small teams, or first-time FMEA users. Covers the essentials: identify what can go wrong, rate the risk, and assign corrective actions.</p>
+                  <ul class="help-list">
+                    <li>Core columns: Process Step, Failure Mode, Effect, Cause, S / O / D, RPN</li>
+                    <li>Action tracking: owner, due date, % complete</li>
+                    <li>Incident linking and count</li>
+                    <li>AI-powered failure mode generation from uploaded documents</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="help-card">
+                <div class="help-card-head" style="background:#276749">🔬 Advanced Mode</div>
+                <div class="help-card-body">
+                  <p>Full AIAG/VDA-aligned workflow for formal engineering teams. Adds deeper analysis columns and post-action re-assessment to close the full risk loop.</p>
+                  <ul class="help-list">
+                    <li>Everything in Simplified, plus:</li>
+                    <li>Action Priority (AP): H / M / L per AIAG/VDA</li>
+                    <li>S×O: severity-occurrence exposure index</li>
+                    <li>Prevention &amp; Detection actions split</li>
+                    <li>Action Status (Open → Completed)</li>
+                    <li>Revised S / O / D and RPN after action</li>
+                    <li>Source traceability and Notes</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="help-steps">
+              <div class="help-step"><span class="help-step-num">1</span><div><b>Create a project</b> — click <em>+ New Project</em> on the dashboard, enter a name, and choose Simplified or Advanced mode.</div></div>
+              <div class="help-step"><span class="help-step-num">2</span><div><b>Add failure modes</b> — upload a document and click <em>Analyze &amp; Generate FMEA</em> to let AI extract failure modes, or add rows manually.</div></div>
+              <div class="help-step"><span class="help-step-num">3</span><div><b>Rate each failure</b> — score Severity (S), Occurrence (O), and Detection (D) from 1–10. RPN = S × O × D is calculated automatically.</div></div>
+              <div class="help-step"><span class="help-step-num">4</span><div><b>Assign actions</b> — for high-RPN items, describe corrective actions, assign an owner, and set a due date.</div></div>
+              <div class="help-step"><span class="help-step-num">5</span><div><b>Log incidents</b> — use the Incidents tab to record real-world failures. Link them to FMEA rows to validate your Occurrence ratings.</div></div>
+              <div class="help-step"><span class="help-step-num">6</span><div><b>Track &amp; export</b> — monitor % complete per row. Export to CSV for reporting or import JSON to continue work later.</div></div>
+            </div>
+            <div class="help-tip">💡 <b>Tip:</b> Data is saved automatically to your browser. Use <em>Export JSON</em> regularly to back up your work, and <em>Import JSON</em> to restore it.</div>
+          </div>
+
+          <!-- SIMPLIFIED -->
+          <div id="help-simple" class="help-panel" style="display:none;padding:22px 26px">
+            <h3 class="help-h3">⚡ Simplified Mode — Step by Step</h3>
+            <p class="help-intro-sm">Simplified mode focuses on the core FMEA loop: identify failures → rate risk → act. Every column is essential; nothing is optional noise.</p>
+            <div class="help-col-table">
+              <div class="help-col-row help-col-header"><div>Column</div><div>What to enter</div><div>Tips</div></div>
+              <div class="help-col-row"><div class="help-col-name">#</div><div>Auto-assigned row number</div><div>Used for referencing rows in discussions and reports</div></div>
+              <div class="help-col-row"><div class="help-col-name">Process Step</div><div>The step, subsystem, or function being analysed</div><div>Be specific — e.g. "Gas flow control valve" not just "Valve"</div></div>
+              <div class="help-col-row"><div class="help-col-name">Failure Mode</div><div>How the step could fail — the physical failure</div><div>e.g. "Valve stuck closed", "Seal leak", "Sensor drift"</div></div>
+              <div class="help-col-row"><div class="help-col-name">Effect</div><div>What happens to the customer / process if this failure occurs</div><div>Think downstream impact: "Process stops", "Yield loss &gt;30%"</div></div>
+              <div class="help-col-row"><div class="help-col-name">Cause</div><div>Root cause of the failure mode</div><div>Use "5 Whys" thinking — go one level deeper than the obvious</div></div>
+              <div class="help-col-row"><div class="help-col-name">S (Severity)</div><div>Rate 1–10: how bad is the effect if it happens?</div><div>10 = safety/regulatory, 7 = major damage, 4 = minor, 1 = no effect. <b>Never lower S just because a fix exists.</b></div></div>
+              <div class="help-col-row"><div class="help-col-name">O (Occurrence)</div><div>Rate 1–10: how often does this cause occur?</div><div>Use MTBF data or incident count if available. Incident badges help calibrate this score.</div></div>
+              <div class="help-col-row"><div class="help-col-name">D (Detection)</div><div>Rate 1–10: how hard is it to detect before impact?</div><div>10 = impossible to detect, 1 = automatic alarm always fires. Lower is better.</div></div>
+              <div class="help-col-row" style="background:#fff5f5"><div class="help-col-name">RPN</div><div>S × O × D — calculated automatically</div><div><span class="rpn-low" style="border-radius:4px;padding:1px 6px">&lt;50 Low</span> <span class="rpn-med" style="border-radius:4px;padding:1px 6px">50–99 Med</span> <span class="rpn-high" style="border-radius:4px;padding:1px 6px">100–199 High</span> <span class="rpn-critical" style="border-radius:4px;padding:1px 6px">≥200 Critical</span></div></div>
+              <div class="help-col-row"><div class="help-col-name">Inc.</div><div>Count of real incidents linked to this row</div><div>Higher count = real-world evidence that O score may need to increase</div></div>
+              <div class="help-col-row"><div class="help-col-name">Action</div><div>Corrective or preventive action to reduce risk</div><div>Focus on reducing S (redesign), O (prevention), or D (detection improvement)</div></div>
+              <div class="help-col-row"><div class="help-col-name">Action Owner</div><div>Person responsible for implementing the action</div><div>Must be a named individual, not a department</div></div>
+              <div class="help-col-row"><div class="help-col-name">Action Due Date</div><div>Target completion date</div><div>Set realistic dates aligned with your project milestones</div></div>
+              <div class="help-col-row"><div class="help-col-name">% Complete</div><div>Progress on the action (0–100%)</div><div>Update as the action progresses. Bar turns green at 100%.</div></div>
+              <div class="help-col-row"><div class="help-col-name">Incidents</div><div>INC-# badges for linked incidents</div><div>Click any badge to jump to the Incidents tab. ⚠️ button on each row opens a new incident pre-linked to that row.</div></div>
+            </div>
+            <div class="help-tip" style="margin-top:18px">💡 <b>When to act:</b> Prioritise rows with RPN ≥ 100 (High) or any row with S ≥ 9 regardless of RPN — a catastrophic but rare failure still warrants a plan.</div>
+          </div>
+
+          <!-- ADVANCED -->
+          <div id="help-advanced" class="help-panel" style="display:none;padding:22px 26px">
+            <h3 class="help-h3">🔬 Advanced Mode — Step by Step</h3>
+            <p class="help-intro-sm">Advanced mode follows the AIAG &amp; VDA FMEA Handbook 7-step process. It adds Action Priority (AP), which is the AIAG/VDA replacement for RPN as the primary decision tool, plus post-action re-assessment to close the risk loop.</p>
+            <h4 class="help-h4">Additional columns (beyond Simplified)</h4>
+            <div class="help-col-table">
+              <div class="help-col-row help-col-header"><div>Column</div><div>What to enter</div><div>Tips</div></div>
+              <div class="help-col-row" style="background:#f0fff4"><div class="help-col-name">S×O</div><div>Severity × Occurrence — auto-calculated</div><div>Highlights high-risk exposure independent of detection.</div></div>
+              <div class="help-col-row" style="background:#f0fff4"><div class="help-col-name">AP</div><div>Action Priority: H / M / L — auto-calculated per AIAG/VDA</div><div><span class="ap-h">H</span> = must act. <span class="ap-m">M</span> = should act. <span class="ap-l">L</span> = review and consider.</div></div>
+              <div class="help-col-row"><div class="help-col-name">Source</div><div>Document and page that identifies this failure mode</div><div>Supports audit traceability.</div></div>
+              <div class="help-col-row" style="background:#f0fff4"><div class="help-col-name">Prevention Action</div><div>Action that prevents the failure cause from occurring</div><div>Targets O reduction.</div></div>
+              <div class="help-col-row" style="background:#f0fff4"><div class="help-col-name">Detection Action</div><div>Action that improves ability to detect the failure</div><div>Targets D reduction.</div></div>
+              <div class="help-col-row" style="background:#f0fff4"><div class="help-col-name">Status</div><div>Select from: Open / Decision Pending / Implementation Pending / Completed / Not Implemented</div><div>An FMEA is not complete until every row is either Completed or Not Implemented with justification.</div></div>
+              <div class="help-col-row"><div class="help-col-name">rS / rO / rD</div><div>Revised S, O, D scores after action is implemented</div><div>Only fill in once action Status = Completed.</div></div>
+              <div class="help-col-row"><div class="help-col-name">rRPN</div><div>Revised RPN = rS × rO × rD — auto-calculated</div><div>Compare to original RPN to confirm the action was effective.</div></div>
+              <div class="help-col-row"><div class="help-col-name">Notes</div><div>Internal team comments, context, or "pointer to evidence"</div><div>Reference test reports, photos, or decision papers.</div></div>
+            </div>
+            <div class="help-tip" style="margin-top:18px">⚠️ <b>Important:</b> AP gives more weight to Severity than RPN does. A failure with S=9, O=1, D=1 (RPN=9) still gets AP=H because the consequence is catastrophic.</div>
+          </div>
+
+          <!-- INCIDENTS HELP -->
+          <div id="help-incidents-help" class="help-panel" style="display:none;padding:22px 26px">
+            <h3 class="help-h3">⚠️ Incident Log — How It Works</h3>
+            <p class="help-intro-sm">The Incident Log captures real-world failures and near-misses. Linking incidents to FMEA rows gives you evidence-based data to validate and recalibrate your Occurrence (O) scores over time.</p>
+            <div class="help-steps">
+              <div class="help-step"><span class="help-step-num">1</span><div><b>Log an incident</b> — go to the <em>⚠️ Incidents</em> tab and click <em>+ Add Incident</em>. Or click the <em>⚠️ button</em> on any FMEA row to open the form pre-linked to that row.</div></div>
+              <div class="help-step"><span class="help-step-num">2</span><div><b>Fill in the form</b> — Timestamp and Description are mandatory. File attachment and FMEA row link are optional but recommended.</div></div>
+              <div class="help-step"><span class="help-step-num">3</span><div><b>Read the FMEA table</b> — linked rows show an <span style="background:#fff5f5;border:1px solid #fed7d7;border-radius:4px;padding:1px 6px;font-size:0.8rem;font-weight:700;color:#c53030">⚠️ INC-#</span> badge and a coloured count bubble.</div></div>
+              <div class="help-step"><span class="help-step-num">4</span><div><b>Use incidents to calibrate O scores</b> — if a row has 3+ real incidents, your original O score may be too optimistic.</div></div>
+              <div class="help-step"><span class="help-step-num">5</span><div><b>Export</b> — use <em>⬇ CSV</em> to export all incidents with their linked FMEA data for reporting.</div></div>
+            </div>
+            <div class="help-tip">💡 Each incident has a unique <b>INC-#</b> number that never changes.</div>
+          </div>
+        </div>
+
+        <div class="guide-section">
+          <h2>Process FMEA — Rating Guidelines</h2>
+          <div class="guide-grid">
+            <div><div class="guide-col-head">Severity (S)</div>
+              <table class="guide-table"><thead><tr><th>Effect</th><th>Criteria</th><th style="width:42px;text-align:center">Rank</th></tr></thead><tbody>
+                <tr style="background:#fff5f5"><td><b>Safety</b></td><td>Non-compliance with government regulation, without warning</td><td style="text-align:center"><span class="rank-badge" style="background:#e53e3e">10</span></td></tr>
+                <tr style="background:#fff8f5"><td></td><td>Non-compliance with government regulation, with warning</td><td style="text-align:center"><span class="rank-badge" style="background:#fc8181">9</span></td></tr>
+                <tr style="background:#fffaf5"><td><b>Serious</b></td><td>Wafer scrap, product reliability</td><td style="text-align:center"><span class="rank-badge" style="background:#f6ad55">8</span></td></tr>
+                <tr style="background:#fffdf5"><td></td><td>Degradation of primary function; yield loss &gt;50%</td><td style="text-align:center"><span class="rank-badge" style="background:#f6ad55">7</span></td></tr>
+                <tr style="background:#fefff5"><td><b>Moderate</b></td><td>Loss of secondary function; yield loss &gt;30%</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">6</span></td></tr>
+                <tr style="background:#fefff5"><td></td><td>Degradation of secondary function; yield loss &gt;20%</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">5</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>Annoyance</b></td><td>Objectionable appearance; yield loss &gt;10%</td><td style="text-align:center"><span class="rank-badge" style="background:#68d391">4</span></td></tr>
+                <tr style="background:#f0fff4"><td></td><td>Nuisance; slightly objectionable; yield loss &lt;10%</td><td style="text-align:center"><span class="rank-badge" style="background:#68d391">3</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>No effect</b></td><td>Customer does not notice the issue</td><td style="text-align:center"><span class="rank-badge" style="background:#48bb78">2</span></td></tr>
+                <tr style="background:#f0fff4"><td></td><td>No discernible effect</td><td style="text-align:center"><span class="rank-badge" style="background:#38a169">1</span></td></tr>
+              </tbody></table></div>
+            <div><div class="guide-col-head">Occurrence (O)</div>
+              <table class="guide-table"><thead><tr><th>Level</th><th>Criteria</th><th style="width:70px">Incidents</th><th style="width:42px;text-align:center">Rank</th></tr></thead><tbody>
+                <tr style="background:#fff5f5"><td><b>Ext. high</b></td><td>No prevention controls</td><td>≥100k ppm</td><td style="text-align:center"><span class="rank-badge" style="background:#e53e3e">10</span></td></tr>
+                <tr style="background:#fff8f5"><td><b>Very high</b></td><td>Failure inevitable; controls have very little effect</td><td>≥50k ppm</td><td style="text-align:center"><span class="rank-badge" style="background:#fc8181">9</span></td></tr>
+                <tr style="background:#fff8f5"><td></td><td>Failure very likely; controls have little effect</td><td>≥20k ppm</td><td style="text-align:center"><span class="rank-badge" style="background:#f6ad55">8</span></td></tr>
+                <tr style="background:#fffaf5"><td><b>High</b></td><td>Failure uncertain; controls somewhat effective</td><td>≥10k ppm</td><td style="text-align:center"><span class="rank-badge" style="background:#f6ad55">7</span></td></tr>
+                <tr style="background:#fffaf5"><td></td><td>Frequent failures; controls proven somewhat effective</td><td>≥2k ppm</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">6</span></td></tr>
+                <tr style="background:#fefff5"><td><b>Moderate</b></td><td>Occasional failures; some prevention control</td><td>≥500 ppm</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">5</span></td></tr>
+                <tr style="background:#fefff5"><td></td><td>Isolated failures; control proven to reduce occurrence</td><td>≥100 ppm</td><td style="text-align:center"><span class="rank-badge" style="background:#68d391">4</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>Low</b></td><td>Rare; controls highly effective</td><td>≥10 ppm</td><td style="text-align:center"><span class="rank-badge" style="background:#68d391">3</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>Very low</b></td><td>Very rare; controls proven highly effective</td><td>≥1 ppm</td><td style="text-align:center"><span class="rank-badge" style="background:#48bb78">2</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>Ext. low</b></td><td>Failure eliminated or impossible by design</td><td>0</td><td style="text-align:center"><span class="rank-badge" style="background:#38a169">1</span></td></tr>
+              </tbody></table></div>
+            <div><div class="guide-col-head">Detection (D)</div>
+              <table class="guide-table"><thead><tr><th>Detectability</th><th>Criteria</th><th style="width:42px;text-align:center">Rank</th></tr></thead><tbody>
+                <tr style="background:#fff5f5"><td><b>Almost impossible</b></td><td>No detection method; failure will not be detected</td><td style="text-align:center"><span class="rank-badge" style="background:#e53e3e">10</span></td></tr>
+                <tr style="background:#fff8f5"><td><b>Very remote</b></td><td>Sporadic/random human inspections; cannot easily detect</td><td style="text-align:center"><span class="rank-badge" style="background:#fc8181">9</span></td></tr>
+                <tr style="background:#fff8f5"><td><b>Remote</b></td><td>Method not proven effective; microscope by highly qualified personnel</td><td style="text-align:center"><span class="rank-badge" style="background:#f6ad55">8</span></td></tr>
+                <tr style="background:#fffaf5"><td><b>Very low</b></td><td>Method proven effective; microscope by highly qualified personnel</td><td style="text-align:center"><span class="rank-badge" style="background:#f6ad55">7</span></td></tr>
+                <tr style="background:#fffaf5"><td><b>Low</b></td><td>Method proven effective; microscope by experienced operator</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">6</span></td></tr>
+                <tr style="background:#fefff5"><td><b>Moderate</b></td><td>Prevents &gt;50% defects; microscope by trained operator</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">5</span></td></tr>
+                <tr style="background:#fefff5"><td><b>Mod. high</b></td><td>Prevents &gt;75% defects; microscope by inexperienced operator</td><td style="text-align:center"><span class="rank-badge" style="background:#68d391">4</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>High</b></td><td>Prevents &gt;90% defects; machine-based in-station detection</td><td style="text-align:center"><span class="rank-badge" style="background:#68d391">3</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>Very high</b></td><td>Machine-based detection prevents defective product</td><td style="text-align:center"><span class="rank-badge" style="background:#48bb78">2</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>Almost certain</b></td><td>Detection method always instantly detects failure</td><td style="text-align:center"><span class="rank-badge" style="background:#38a169">1</span></td></tr>
+              </tbody></table></div>
+          </div>
+        </div>
+        <div class="guide-section">
+          <h2>Equipment FMEA — Ranking Guidelines</h2>
+          <div class="guide-grid">
+            <div><div class="guide-col-head">Severity (S)</div>
+              <table class="guide-table"><thead><tr><th>Effect</th><th>Criteria</th><th style="width:42px;text-align:center">Rank</th></tr></thead><tbody>
+                <tr style="background:#fff5f5"><td><b>Safety</b></td><td>Affects safety; non-compliance without warning</td><td style="text-align:center"><span class="rank-badge" style="background:#e53e3e">10</span></td></tr>
+                <tr style="background:#fff8f5"><td></td><td>Affects safety; non-compliance with advance warning</td><td style="text-align:center"><span class="rank-badge" style="background:#fc8181">9</span></td></tr>
+                <tr style="background:#fffaf5"><td><b>Serious</b></td><td>Downtime &gt;8h or defective parts for &gt;4h</td><td style="text-align:center"><span class="rank-badge" style="background:#f6ad55">8</span></td></tr>
+                <tr style="background:#fffdf5"><td></td><td>Downtime 4–8h or defective parts for 2–4h</td><td style="text-align:center"><span class="rank-badge" style="background:#f6ad55">7</span></td></tr>
+                <tr style="background:#fefff5"><td><b>Moderate</b></td><td>Downtime 1–4h or defective parts for 1–2h</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">6</span></td></tr>
+                <tr style="background:#fefff5"><td></td><td>Downtime 30min–1h or defective parts for &lt;1h</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">5</span></td></tr>
+                <tr style="background:#fefff5"><td></td><td>Downtime 10–30min; no defective parts</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">4</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>Annoyance</b></td><td>Downtime &lt;10min; no defective parts</td><td style="text-align:center"><span class="rank-badge" style="background:#68d391">3</span></td></tr>
+                <tr style="background:#f0fff4"><td></td><td>Parameter variability out of spec; adjustment during production</td><td style="text-align:center"><span class="rank-badge" style="background:#48bb78">2</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>No effect</b></td><td>Parameter variability within spec; adjustment during maintenance</td><td style="text-align:center"><span class="rank-badge" style="background:#38a169">1</span></td></tr>
+              </tbody></table></div>
+            <div><div class="guide-col-head">Occurrence (O) — MTBF</div>
+              <table class="guide-table"><thead><tr><th>Level</th><th>Criteria</th><th style="width:42px;text-align:center">Rank</th></tr></thead><tbody>
+                <tr style="background:#fff5f5"><td><b>Ext. high</b></td><td>1 failure in 10 pieces or MTBF &lt;1h</td><td style="text-align:center"><span class="rank-badge" style="background:#e53e3e">10</span></td></tr>
+                <tr style="background:#fff8f5"><td><b>Very high</b></td><td>MTBF 2–10 hours</td><td style="text-align:center"><span class="rank-badge" style="background:#fc8181">9</span></td></tr>
+                <tr style="background:#fff8f5"><td></td><td>MTBF 11–100 hours</td><td style="text-align:center"><span class="rank-badge" style="background:#f6ad55">8</span></td></tr>
+                <tr style="background:#fffaf5"><td></td><td>MTBF 101–400 hours</td><td style="text-align:center"><span class="rank-badge" style="background:#f6ad55">7</span></td></tr>
+                <tr style="background:#fffaf5"><td><b>High</b></td><td>MTBF 401–1,000 hours (16 days–6 weeks)</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">6</span></td></tr>
+                <tr style="background:#fefff5"><td></td><td>MTBF 1,001–2,000 hours (6–12 weeks)</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">5</span></td></tr>
+                <tr style="background:#fefff5"><td><b>Moderate</b></td><td>MTBF 2,001–3,000 hours (12–18 weeks)</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">4</span></td></tr>
+                <tr style="background:#f0fff4"><td></td><td>MTBF 3,001–6,000 hours (18–36 weeks)</td><td style="text-align:center"><span class="rank-badge" style="background:#68d391">3</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>Low</b></td><td>MTBF 6,001–10,000 hours (36–60 weeks)</td><td style="text-align:center"><span class="rank-badge" style="background:#48bb78">2</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>Ext. low</b></td><td>MTBF &gt;10,000 hours (60+ weeks)</td><td style="text-align:center"><span class="rank-badge" style="background:#38a169">1</span></td></tr>
+              </tbody></table></div>
+            <div><div class="guide-col-head">Contingency Measures (D)</div>
+              <table class="guide-table"><thead><tr><th>Plan</th><th>Criteria</th><th style="width:42px;text-align:center">Rank</th></tr></thead><tbody>
+                <tr style="background:#fff5f5"><td><b>No plan</b></td><td>ELT involvement needed to determine contingency</td><td style="text-align:center"><span class="rank-badge" style="background:#e53e3e">10</span></td></tr>
+                <tr style="background:#fff8f5"><td></td><td>Management approval needed or measures take &gt;96h</td><td style="text-align:center"><span class="rank-badge" style="background:#fc8181">9</span></td></tr>
+                <tr style="background:#fff8f5"><td></td><td>Engineering can mitigate within 96h</td><td style="text-align:center"><span class="rank-badge" style="background:#f6ad55">8</span></td></tr>
+                <tr style="background:#fffaf5"><td></td><td>Engineering can mitigate within 48h</td><td style="text-align:center"><span class="rank-badge" style="background:#f6ad55">7</span></td></tr>
+                <tr style="background:#fffaf5"><td><b>Not described</b></td><td>Obvious for engineering; mitigate within 24h</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">6</span></td></tr>
+                <tr style="background:#fefff5"><td></td><td>Shift can execute within 8h with remote engineering help</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">5</span></td></tr>
+                <tr style="background:#fefff5"><td></td><td>Obvious for shift; execute within 8h with remote help</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">4</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>Described</b></td><td>Clearly described; shift within 8h with remote help</td><td style="text-align:center"><span class="rank-badge" style="background:#68d391">3</span></td></tr>
+                <tr style="background:#f0fff4"><td></td><td>Clearly described; shift can execute within 8h</td><td style="text-align:center"><span class="rank-badge" style="background:#48bb78">2</span></td></tr>
+                <tr style="background:#f0fff4"><td></td><td>Clearly described; shift can execute within 4h</td><td style="text-align:center"><span class="rank-badge" style="background:#38a169">1</span></td></tr>
+              </tbody></table></div>
+          </div>
+        </div>
+      </div><!-- /panel-guide -->
+
+    </div><!-- /ws-main -->
+  </div><!-- /workspace -->
+</div><!-- /screenWork -->
+
+<!-- New Project Modal -->
+<div class="modal-overlay" id="newProjModal" onclick="if(event.target===this)closeNewProjectModal()">
+  <div class="modal" style="max-width:620px;max-height:90vh;overflow-y:auto">
+    <h3>📁 New FMEA Project</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field" style="margin:0"><label>Project Name *</label><input type="text" id="newProjName" placeholder="e.g. AIXTRON G3 Reactor FMEA"></div>
+      <div class="field" style="margin:0"><label>FMEA ID</label><input type="text" id="newProjId" placeholder="e.g. FMEA-2024-001"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <div class="field" style="margin:0"><label>Company Name</label><input type="text" id="newProjCompany" placeholder="e.g. AIXTRON SE"></div>
+      <div class="field" style="margin:0"><label>Location</label><input type="text" id="newProjLocation" placeholder="e.g. Herzogenrath, Germany"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <div class="field" style="margin:0"><label>Customer / Product</label><input type="text" id="newProjCustomer" placeholder="e.g. Internal / G3 Reactor"></div>
+      <div class="field" style="margin:0"><label>Model Year / Program</label><input type="text" id="newProjProgram" placeholder="e.g. G3 v2 2024"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <div class="field" style="margin:0"><label>Process Responsibility (Owner)</label><input type="text" id="newProjOwner" placeholder="e.g. Jan Kowalski"></div>
+      <div class="field" style="margin:0"><label>Confidentiality Level</label>
+        <select id="newProjConfidentiality" style="width:100%;border:1.5px solid #cbd5e0;border-radius:8px;padding:10px 12px;font-size:0.86rem;font-family:inherit;background:white">
+          <option value="Business Use">Business Use</option>
+          <option value="Proprietary">Proprietary</option>
+          <option value="Confidential">Confidential</option>
+          <option value="Public">Public</option>
+        </select>
+      </div>
+    </div>
+    <div class="field" style="margin-top:10px"><label>Cross-Functional Team</label><input type="text" id="newProjTeam" placeholder="e.g. J. Kowalski, A. Grzegorczyk, B. Schmidt (Process, Quality, Engineering)"></div>
+    <div class="field"><label>Description / Scope</label><textarea class="doc-textarea" id="newProjDesc" style="min-height:60px" placeholder="Brief description of the FMEA scope and boundaries..."></textarea></div>
+    <div class="field">
+      <label>FMEA Mode *</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px">
+        <label id="modeSimpleCard" class="mode-card mode-card-active" onclick="selectMode('simple')">
+          <input type="radio" name="fmeaMode" value="simple" id="modeSimple" checked style="display:none">
+          <div class="mode-card-icon">⚡</div>
+          <div class="mode-card-title">Simplified</div>
+          <div class="mode-card-desc">Core columns: failure mode, effect, cause, S/O/D, RPN, actions. Best for quick assessments and small teams.</div>
+        </label>
+        <label id="modeAdvancedCard" class="mode-card" onclick="selectMode('advanced')">
+          <input type="radio" name="fmeaMode" value="advanced" id="modeAdvanced" style="display:none">
+          <div class="mode-card-icon">🔬</div>
+          <div class="mode-card-title">Advanced</div>
+          <div class="mode-card-desc">Full AIAG/VDA columns: AP, S×O, current controls, action status, prevention vs detection actions, revised S/O/D, source, notes.</div>
+        </label>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-secondary" type="button" onclick="closeNewProjectModal()">Cancel</button>
+      <button class="btn btn-primary" type="button" onclick="createProject()">Create Project</button>
+    </div>
+  </div>
+</div>
+
+<!-- Project Settings / Header Modal -->
+<div class="modal-overlay" id="projSettingsModal" onclick="if(event.target===this)closeProjSettings()">
+  <div class="modal" style="max-width:640px;max-height:90vh;overflow-y:auto">
+    <h3>⚙ Project Header — AIAG/VDA Metadata</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field" style="margin:0"><label>Project Name *</label><input type="text" id="setProjName" placeholder="e.g. AIXTRON G3 Reactor FMEA"></div>
+      <div class="field" style="margin:0"><label>FMEA ID</label><input type="text" id="setProjFmeaId" placeholder="e.g. FMEA-2024-001"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <div class="field" style="margin:0"><label>Company Name</label><input type="text" id="setProjCompany" placeholder="e.g. AIXTRON SE"></div>
+      <div class="field" style="margin:0"><label>Location</label><input type="text" id="setProjLocation" placeholder="e.g. Herzogenrath, Germany"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <div class="field" style="margin:0"><label>Customer / Product</label><input type="text" id="setProjCustomer" placeholder="e.g. Internal / G3 Reactor"></div>
+      <div class="field" style="margin:0"><label>Model Year / Program</label><input type="text" id="setProjProgram" placeholder="e.g. G3 v2 2024"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <div class="field" style="margin:0"><label>Process Responsibility (Owner)</label><input type="text" id="setProjOwner" placeholder="e.g. Jan Kowalski"></div>
+      <div class="field" style="margin:0"><label>Confidentiality Level</label>
+        <select id="setProjConfidentiality" style="width:100%;border:1.5px solid #cbd5e0;border-radius:8px;padding:10px 12px;font-size:0.86rem;font-family:inherit;background:white">
+          <option value="Business Use">Business Use</option>
+          <option value="Proprietary">Proprietary</option>
+          <option value="Confidential">Confidential</option>
+          <option value="Public">Public</option>
+        </select>
+      </div>
+    </div>
+    <div class="field" style="margin-top:10px"><label>Cross-Functional Team</label><input type="text" id="setProjTeam" placeholder="e.g. J. Kowalski, A. Grzegorczyk, B. Schmidt (Process, Quality, Engineering)"></div>
+    <div class="field"><label>Description / Scope</label><textarea class="doc-textarea" id="setProjDesc" style="min-height:60px" placeholder="Brief description of the FMEA scope and boundaries..."></textarea></div>
+    <div style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;font-size:0.78rem;color:#718096;margin-bottom:16px">
+      <strong style="color:#2d6a9f">Read-only:</strong>
+      <span id="setProjDates"></span>
+    </div>
+
+    <!-- AI Provider section -->
+    <div style="background:#ebf4ff;border:1px solid #bee3f8;border-radius:8px;padding:14px 16px;margin-bottom:16px">
+      <div style="font-size:0.82rem;font-weight:700;color:#2b6cb0;margin-bottom:8px">🤖 AI Provider</div>
+      <div style="font-size:0.76rem;color:#4a5568;margin-bottom:10px">Select your preferred provider for AI analysis. Stored locally in your browser only.</div>
+
+      <div style="margin-bottom:12px">
+        <label style="display:block;font-size:0.78rem;font-weight:600;color:#2d3748;margin-bottom:6px">Provider</label>
+        <select id="settingsProvider" onchange="updateSettingsApiKeyUI()" style="width:100%;padding:8px 12px;border:1.5px solid #bee3f8;border-radius:8px;font-size:0.86rem;background:#fff;cursor:pointer">
+          <option value="claude">Claude (Anthropic)</option>
+          <option value="gemini">Gemini (Google)</option>
+          <option value="groq">Groq</option>
+          <option value="ollama">Ollama (Local)</option>
+        </select>
+      </div>
+
+      <div id="groqModelField" style="display:none;margin-bottom:12px">
+        <label style="display:block;font-size:0.78rem;font-weight:600;color:#2d3748;margin-bottom:6px">Groq Model</label>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+          <select id="groqModelSelect" onchange="updateGroqModelPricing()" style="flex:1;padding:8px 12px;border:1.5px solid #bee3f8;border-radius:8px;font-size:0.86rem;background:#fff;cursor:pointer">
+            <option value="">Loading models...</option>
+          </select>
+          <button type="button" onclick="loadGroqModels()" class="btn btn-secondary" style="white-space:nowrap;padding:9px 14px;font-size:0.82rem">Refresh</button>
+        </div>
+        <div id="groqModelPrice" style="font-size:0.72rem;color:#718096;margin-bottom:10px"></div>
+
+        <label style="display:block;font-size:0.78rem;font-weight:600;color:#2d3748;margin-bottom:6px">Max Output Tokens</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="number" id="groqMaxTokens" min="512" max="8192" value="8192" style="flex:1;padding:8px 12px;border:1.5px solid #bee3f8;border-radius:8px;font-size:0.86rem">
+          <span style="font-size:0.72rem;color:#718096;white-space:nowrap">max: 8192</span>
+        </div>
+        <div style="font-size:0.72rem;color:#718096;margin-top:4px">Groq models limit output to 8192 tokens. Reduce if you get token limit errors.</div>
+      </div>
+
+      <div id="settingsApiKeyField" style="margin-bottom:12px">
+        <label id="settingsApiLabel" style="display:block;font-size:0.78rem;font-weight:600;color:#2d3748;margin-bottom:6px">API Key</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div style="position:relative;flex:1">
+            <input type="password" id="settingsApiKey" placeholder="sk-ant-…" style="width:100%;border:1.5px solid #bee3f8;border-radius:8px;padding:9px 44px 9px 12px;font-size:0.86rem;font-family:inherit">
+            <button type="button" onclick="toggleApiKeyVisibility('settingsApiKey')" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#718096;font-size:0.75rem">Show</button>
+          </div>
+          <button id="testApiBtn" type="button" onclick="testApiConnection()" class="btn btn-secondary" style="white-space:nowrap;padding:9px 14px;font-size:0.82rem">Test</button>
+        </div>
+        <div id="settingsProviderHint" style="font-size:0.72rem;color:#718096;margin-top:4px"></div>
+      </div>
+
+      <div id="ollamaNote" style="display:none;background:#fff5f0;border:1px solid #fbe4d6;border-radius:6px;padding:10px 12px;font-size:0.75rem;color:#7c2d12;line-height:1.4">
+        <strong>ℹ️ Ollama Setup Required:</strong><br>
+        1. Download Ollama: <a href="https://ollama.ai" target="_blank" style="color:#c2410c">ollama.ai</a><br>
+        2. Run: <code style="background:#f0f0f0;padding:2px 4px;border-radius:3px">ollama serve</code><br>
+        3. Pull a model: <code style="background:#f0f0f0;padding:2px 4px;border-radius:3px">ollama pull mistral</code>
+      </div>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn btn-secondary" type="button" onclick="closeProjSettings()">Cancel</button>
+      <button class="btn btn-primary" type="button" onclick="saveProjSettings()">Save Header</button>
+    </div>
+  </div>
+</div>
+
+<!-- Incident Modal -->
+<div class="modal-overlay" id="incidentModal" onclick="if(event.target===this)closeIncidentModal()">
+  <div class="inc-modal">
+    <h3 id="incModalTitle">⚠️ Log Incident</h3>
+    <input type="hidden" id="incEditId">
+    <div class="field">
+      <label>Timestamp <span class="req">*</span></label>
+      <input type="datetime-local" id="incTimestamp">
+    </div>
+    <div class="field">
+      <label>Description <span class="req">*</span></label>
+      <textarea id="incDescription" placeholder="Describe what happened, conditions, observations…"></textarea>
+    </div>
+    <div class="field">
+      <label>Attach File <span style="font-size:0.74rem;color:#a0aec0;font-weight:400">(optional)</span></label>
+      <div class="inc-upload-area" onclick="document.getElementById('incFileInput').click()">
+        📎 Click to attach a file
+        <input type="file" id="incFileInput" style="display:none" onchange="handleIncFile(this)">
+      </div>
+      <div class="inc-file-name" id="incFileName"></div>
+    </div>
+    <div class="field">
+      <label>Link to FMEA Row <span style="font-size:0.74rem;color:#a0aec0;font-weight:400">(optional)</span></label>
+      <select id="incFmeaLink" onchange="updateFmeaPreview()">
+        <option value="">— Not linked —</option>
+      </select>
+      <div class="inc-fmea-preview" id="incFmeaPreview"></div>
+    </div>
+    <div class="inc-err" id="incErr"></div>
+    <div class="modal-btns">
+      <button type="button" class="btn btn-secondary" onclick="event.stopPropagation();closeIncidentModal()">Cancel</button>
+      <button type="button" class="btn btn-primary" onclick="event.stopPropagation();saveIncident()">Save Incident</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <h4 id="confirmTitle">Confirm</h4>
+    <p id="confirmMsg"></p>
+    <div class="confirm-btns">
+      <button class="confirm-yes" id="confirmYes">Confirm</button>
+      <button class="confirm-no"  id="confirmNo">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Print Report Overlay -->
+<div id="reportOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:white;overflow:auto">
+  <div id="reportContent" style="max-width:1100px;margin:0 auto;padding:30px 40px;font-family:'Segoe UI',sans-serif;color:#1a202c">
+    <!-- filled by JS -->
+  </div>
+  <div id="reportActions" style="position:fixed;top:16px;right:16px;display:flex;gap:8px;z-index:10000">
+    <button onclick="window.print()" style="background:#2d6a9f;color:white;border:none;border-radius:8px;padding:9px 18px;font-size:0.86rem;font-weight:600;cursor:pointer">🖨 Print / Save PDF</button>
+    <button onclick="closeReport()" style="background:white;color:#2d6a9f;border:1.5px solid #2d6a9f;border-radius:8px;padding:9px 18px;font-size:0.86rem;font-weight:600;cursor:pointer">✕ Close</button>
+  </div>
+</div>
+
+<!-- AI Review Overlay -->
+<div id="reviewOverlay" class="review-overlay">
+  <div class="review-header">
+    <div>
+      <h2>🔍 Review AI-Generated Failure Modes</h2>
+      <div class="review-header-sub">Accept, edit or reject each item before adding to your FMEA worksheet</div>
+    </div>
+    <div class="review-progress">
+      <div class="review-progress-lbl">
+        <span id="revProgressTxt">0 of 0 reviewed</span>
+        <span id="revAcceptedTxt">0 accepted</span>
+      </div>
+      <div class="review-progress-bar"><div class="review-progress-fill" id="revProgressFill" style="width:0%"></div></div>
+    </div>
+    <div class="review-actions-hdr">
+      <button class="btn-hdr" onclick="reviewAcceptAll()">✓ Accept All</button>
+      <button class="btn-hdr" onclick="reviewRejectAll()">✕ Reject All</button>
+    </div>
+  </div>
+  <div class="review-body" id="reviewBody"></div>
+  <div class="review-footer">
+    <div class="review-footer-stats" id="reviewFooterStats"></div>
+    <button class="btn btn-secondary" onclick="closeReview()" style="padding:9px 20px">Cancel</button>
+    <button class="btn btn-primary" id="reviewConfirmBtn" onclick="confirmReview()" style="padding:9px 20px">✅ Add Accepted to FMEA</button>
+  </div>
+</div>
+
+<script src="js/utils.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/projects.js"></script>
+<script src="js/table.js"></script>
+<script src="js/analyze.js"></script>
+<script src="js/incidents.js"></script>
+<script src="js/reports.js"></script>
+<script src="js/export.js"></script>
+</body>
+</html>

@@ -1,0 +1,3140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FMEA Tool</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #1a202c; min-height: 100vh; }
+
+/* ── SCREENS ── */
+.screen { display: none; min-height: 100vh; flex-direction: column; }
+.screen.active { display: flex; }
+
+/* ── LOGIN ── */
+.login-bg { flex: 1; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 60%, #4299e1 100%); }
+.login-card { background: white; border-radius: 16px; padding: 40px 44px; width: 100%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+.login-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+.login-logo h1 { font-size: 1.3rem; font-weight: 700; color: #1e3a5f; }
+.login-logo small { font-size: 0.72rem; color: #718096; display: block; }
+.login-card h2 { font-size: 1rem; color: #4a5568; margin-bottom: 22px; }
+.field { margin-bottom: 16px; }
+.field label { display: block; font-size: 0.82rem; font-weight: 600; color: #4a5568; margin-bottom: 5px; }
+.field input { width: 100%; border: 1.5px solid #cbd5e0; border-radius: 8px; padding: 10px 13px; font-size: 0.9rem; font-family: inherit; transition: all 0.2s; }
+.field input:focus { outline: none; border-color: #2d6a9f; box-shadow: 0 0 0 3px rgba(45,106,159,0.12); }
+.login-err { color: #e53e3e; font-size: 0.82rem; margin-bottom: 12px; min-height: 18px; }
+.btn-login { width: 100%; background: linear-gradient(135deg, #1e3a5f, #2d6a9f); color: white; border: none; border-radius: 8px; padding: 12px; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: opacity 0.2s; }
+.btn-login:hover { opacity: 0.9; }
+.login-hint { margin-top: 14px; font-size: 0.76rem; color: #a0aec0; text-align: center; }
+
+/* ── HEADER ── */
+header { background: linear-gradient(135deg, #1e3a5f, #2d6a9f); color: white; padding: 0 24px; display: flex; flex-wrap: wrap; align-items: stretch; box-shadow: 0 2px 8px rgba(0,0,0,0.2); flex-shrink: 0; }
+.header-top-row { display: flex; align-items: center; width: 100%; padding: 10px 0 8px; }
+.header-title { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.header-title h1 { font-size: 1.15rem; font-weight: 700; }
+.header-title small { font-size: 0.7rem; opacity: 0.7; display: block; }
+.header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.header-user { font-size: 0.82rem; opacity: 0.85; }
+.btn-hdr { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 7px; padding: 6px 13px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.btn-hdr:hover { background: rgba(255,255,255,0.25); }
+
+/* ── TABS ── */
+.tabs { display: flex; align-items: flex-end; gap: 3px; width: 100%; padding-top: 2px; }
+.tab { padding: 8px 18px; font-size: 0.83rem; font-weight: 600; border: none; cursor: pointer; border-radius: 8px 8px 0 0; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); transition: all 0.15s; display: flex; align-items: center; gap: 5px; border: 1px solid rgba(255,255,255,0.1); border-bottom: none; }
+.tab:hover { background: rgba(255,255,255,0.2); color: white; }
+.tab.active { background: #f0f4f8; color: #1e3a5f; font-weight: 700; }
+.badge { background: #2d6a9f; color: white; border-radius: 10px; padding: 1px 6px; font-size: 0.67rem; font-weight: 700; }
+.tab.active .badge { background: #e53e3e; }
+
+/* ── DASHBOARD ── */
+.dash-main { flex: 1; max-width: 1100px; width: 100%; margin: 0 auto; padding: 32px 20px; }
+.dash-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+.dash-toolbar h2 { font-size: 1.2rem; font-weight: 700; color: #1e3a5f; }
+.btn { padding: 9px 18px; border-radius: 8px; border: none; font-size: 0.86rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.btn-primary { background: #2d6a9f; color: white; }
+.btn-primary:hover { background: #1e3a5f; }
+.btn-secondary { background: white; color: #2d6a9f; border: 1.5px solid #2d6a9f; }
+.btn-secondary:hover { background: #ebf4ff; }
+.btn-danger { background: white; color: #e53e3e; border: 1.5px solid #e53e3e; }
+.btn-danger:hover { background: #fff5f5; }
+.btn-success { background: #38a169; color: white; }
+.btn-success:hover { background: #276749; }
+
+.proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
+.proj-card { background: white; border-radius: 12px; padding: 22px; box-shadow: 0 2px 10px rgba(0,0,0,0.07); border: 2px solid transparent; transition: all 0.18s; cursor: pointer; }
+.proj-card:hover { border-color: #2d6a9f; box-shadow: 0 4px 20px rgba(45,106,159,0.15); transform: translateY(-2px); }
+.proj-card-name { font-size: 1rem; font-weight: 700; color: #1e3a5f; margin-bottom: 6px; }
+.proj-card-desc { font-size: 0.82rem; color: #718096; margin-bottom: 14px; line-height: 1.5; min-height: 38px; }
+.proj-card-meta { display: flex; gap: 14px; font-size: 0.76rem; color: #a0aec0; margin-bottom: 14px; flex-wrap: wrap; }
+.proj-card-meta span { display: flex; align-items: center; gap: 4px; }
+.proj-card-actions { display: flex; gap: 8px; }
+.btn-xs { padding: 5px 12px; border-radius: 6px; font-size: 0.76rem; font-weight: 600; border: none; cursor: pointer; transition: all 0.15s; }
+.btn-xs-open { background: #2d6a9f; color: white; } .btn-xs-open:hover { background: #1e3a5f; }
+.btn-xs-del  { background: #fff5f5; color: #e53e3e; border: 1px solid #fed7d7; } .btn-xs-del:hover { background: #fed7d7; }
+.empty-dash { text-align: center; padding: 80px 20px; color: #a0aec0; }
+.empty-dash p { font-size: 0.95rem; margin-top: 12px; }
+
+/* ── MODAL ── */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 500; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: white; border-radius: 14px; padding: 32px 36px; width: 90%; max-width: 480px; box-shadow: 0 16px 48px rgba(0,0,0,0.2); }
+.modal h3 { font-size: 1.05rem; font-weight: 700; color: #1e3a5f; margin-bottom: 20px; }
+.modal-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+
+/* ── CONFIRM ── */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; align-items: center; justify-content: center; }
+.overlay.open { display: flex; }
+.confirm-box { background: white; border-radius: 12px; padding: 28px 32px; max-width: 340px; width: 90%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.18); }
+.confirm-box h4 { font-size: 1rem; margin-bottom: 8px; }
+.confirm-box p { font-size: 0.84rem; color: #718096; margin-bottom: 20px; }
+.confirm-btns { display: flex; gap: 10px; justify-content: center; }
+.confirm-yes { background: #e53e3e; color: white; border: none; border-radius: 8px; padding: 8px 20px; font-size: 0.86rem; font-weight: 600; cursor: pointer; }
+.confirm-no  { background: white; color: #4a5568; border: 1.5px solid #cbd5e0; border-radius: 8px; padding: 8px 20px; font-size: 0.86rem; font-weight: 600; cursor: pointer; }
+
+/* ── FMEA WORKSPACE ── */
+.workspace { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.proj-banner { background: #ebf4ff; border-bottom: 1px solid #bee3f8; padding: 8px 24px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.proj-banner-name { font-size: 0.88rem; font-weight: 700; color: #1e3a5f; }
+.proj-banner-desc { font-size: 0.78rem; color: #718096; }
+.proj-banner-save { font-size: 0.74rem; color: #68d391; margin-left: auto; font-weight: 600; }
+
+.ws-main { flex: 1; max-width: 1800px; width: 100%; margin: 0 auto; padding: 20px; overflow: auto; }
+
+/* upload card */
+.upload-card { background: white; border-radius: 12px; padding: 26px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+.upload-card h2 { font-size: 0.95rem; font-weight: 600; color: #2d6a9f; margin-bottom: 14px; }
+.upload-area { border: 2px dashed #a0bcd8; border-radius: 10px; padding: 24px; text-align: center; cursor: pointer; background: #f7fafc; margin-bottom: 14px; transition: all 0.2s; }
+.upload-area:hover, .upload-area.drag { border-color: #2d6a9f; background: #ebf4ff; }
+.upload-area p { color: #718096; font-size: 0.85rem; }
+.upload-area strong { color: #2d6a9f; }
+.file-list { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; }
+.file-chip { background: #ebf4ff; border: 1px solid #bee3f8; border-radius: 20px; padding: 3px 11px; font-size: 0.79rem; color: #2b6cb0; display: flex; align-items: center; gap: 5px; }
+.file-chip button { background: none; border: none; cursor: pointer; color: #e53e3e; font-size: 0.95rem; }
+.doc-textarea { width: 100%; border: 1px solid #cbd5e0; border-radius: 8px; padding: 11px; font-size: 0.85rem; resize: vertical; min-height: 80px; font-family: inherit; color: #2d3748; }
+.doc-textarea:focus { outline: none; border-color: #2d6a9f; box-shadow: 0 0 0 3px rgba(45,106,159,0.1); }
+.controls { display: flex; gap: 9px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+.status { font-size: 0.82rem; color: #718096; margin-left: auto; }
+.status.loading { color: #2d6a9f; font-weight: 600; }
+.status.error { color: #e53e3e; }
+.spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid #bee3f8; border-top-color: #2d6a9f; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 4px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* table */
+.table-card { background: white; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); overflow: hidden; }
+.table-header { padding: 12px 18px; background: #1e3a5f; color: white; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.table-header h2 { font-size: 0.92rem; font-weight: 600; }
+.btn-sm { padding: 5px 11px; font-size: 0.76rem; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; transition: all 0.15s; white-space: nowrap; }
+.btn-green  { background: #48bb78; color: white; } .btn-green:hover  { background: #38a169; }
+.btn-orange { background: #ed8936; color: white; } .btn-orange:hover { background: #dd6b20; }
+.btn-purple { background: #667eea; color: white; } .btn-purple:hover { background: #5a67d8; }
+.btn-blue   { background: #4299e1; color: white; } .btn-blue:hover   { background: #3182ce; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; font-size: 0.77rem; table-layout: fixed; width: max-content; min-width: 100%; }
+thead tr { background: #2d6a9f; color: white; }
+thead th { position: relative; padding: 9px 8px; text-align: left; font-weight: 600; white-space: nowrap; overflow: hidden; user-select: none; border-right: 1px solid rgba(255,255,255,0.15); }
+.th-label { display: block; overflow: hidden; text-overflow: ellipsis; }
+.col-resizer { position: absolute; right: 0; top: 0; bottom: 0; width: 6px; cursor: col-resize; z-index: 10; }
+.col-resizer:hover, .col-resizer.resizing { background: rgba(255,255,255,0.4); }
+#resizeLine { display: none; position: fixed; top: 0; bottom: 0; width: 2px; background: #90cdf4; z-index: 9999; pointer-events: none; }
+tbody tr { border-bottom: 1px solid #e2e8f0; }
+tbody tr:hover { background: #f7fafc; }
+tbody td { padding: 6px 7px; vertical-align: top; overflow: hidden; }
+.editable textarea, .editable input[type=number], .editable input[type=text] { width: 100%; border: 1px solid transparent; border-radius: 4px; padding: 3px 5px; font-size: 0.77rem; font-family: inherit; background: transparent; resize: none; color: inherit; overflow-y: auto; }
+.editable textarea:focus, .editable input:focus { outline: none; border-color: #2d6a9f; background: white; box-shadow: 0 0 0 2px rgba(45,106,159,0.12); }
+.num-input { width: 40px !important; text-align: center; }
+.row-num { text-align: center; vertical-align: middle !important; }
+.row-num-inner { display: flex; flex-direction: column; align-items: center; gap: 3px; color: #a0aec0; font-size: 0.72rem; font-weight: 600; }
+.row-resizer { cursor: row-resize; color: #cbd5e0; font-size: 0.82rem; padding: 1px 4px; border-radius: 3px; }
+.row-resizer:hover { color: #2d6a9f; background: #ebf4ff; }
+.rpn-cell { font-weight: 700; text-align: center; border-radius: 5px; padding: 2px 5px; display: inline-block; min-width: 34px; }
+.rpn-low { background: #c6f6d5; color: #276749; }
+.rpn-med { background: #fefcbf; color: #7b6d00; }
+.rpn-high { background: #fed7d7; color: #9b2c2c; }
+.rpn-critical { background: #e53e3e; color: white; }
+.source-wrap { display: flex; flex-direction: column; gap: 2px; }
+.source-wrap select { width: 100%; border: 1px solid transparent; border-radius: 4px; padding: 2px 3px; font-size: 0.72rem; font-family: inherit; background: transparent; }
+.source-wrap select:focus { outline: none; border-color: #2d6a9f; background: white; }
+.source-page { display: flex; align-items: center; gap: 3px; font-size: 0.7rem; color: #718096; }
+.source-page input { width: 48px; border: 1px solid transparent; border-radius: 4px; padding: 2px 4px; font-size: 0.7rem; font-family: inherit; background: transparent; }
+.source-page input:focus { outline: none; border-color: #2d6a9f; background: white; }
+.del-btn { background: none; border: none; cursor: pointer; color: #fc8181; font-size: 0.95rem; padding: 2px 5px; border-radius: 4px; }
+.del-btn:hover { background: #fff5f5; color: #e53e3e; }
+.empty-state { padding: 50px 20px; text-align: center; color: #a0aec0; }
+.empty-state p { font-size: 0.9rem; margin-top: 8px; }
+.legend { display: flex; gap: 14px; padding: 10px 18px; background: #f7fafc; border-top: 1px solid #e2e8f0; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; color: #4a5568; }
+.legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+/* ── SEARCH BAR ── */
+.search-bar { padding: 10px 18px; background: #f7fafc; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.search-input-wrap { position: relative; flex: 1; min-width: 200px; max-width: 380px; }
+.search-input-wrap svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+.search-input { width: 100%; padding: 7px 10px 7px 32px; border: 1.5px solid #cbd5e0; border-radius: 8px; font-size: 0.83rem; font-family: inherit; color: #2d3748; background: white; transition: all 0.2s; }
+.search-input:focus { outline: none; border-color: #2d6a9f; box-shadow: 0 0 0 3px rgba(45,106,159,0.1); }
+.search-filter-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.filter-label { font-size: 0.78rem; color: #718096; font-weight: 600; white-space: nowrap; }
+.filter-btn { padding: 5px 11px; border-radius: 6px; border: 1.5px solid #cbd5e0; background: white; font-size: 0.76rem; font-weight: 600; cursor: pointer; transition: all 0.15s; color: #4a5568; }
+.filter-btn:hover { border-color: #2d6a9f; color: #2d6a9f; }
+.filter-btn.active { border-color: transparent; color: white; }
+.filter-btn.f-all.active   { background: #2d6a9f; }
+.filter-btn.f-low.active   { background: #38a169; }
+.filter-btn.f-med.active   { background: #d69e2e; }
+.filter-btn.f-high.active  { background: #c05621; }
+.filter-btn.f-crit.active  { background: #e53e3e; }
+.search-count { font-size: 0.78rem; color: #718096; margin-left: auto; white-space: nowrap; }
+.search-clear { background: none; border: none; cursor: pointer; color: #a0aec0; font-size: 1rem; padding: 2px 6px; border-radius: 4px; transition: color 0.15s; }
+.search-clear:hover { color: #e53e3e; }
+tr.search-hidden { display: none; }
+
+
+
+/* ── USER GUIDE ── */
+.help-tab { background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.25); color:rgba(255,255,255,0.8); border-radius:6px; padding:5px 12px; font-size:0.78rem; font-weight:600; cursor:pointer; transition:all 0.15s; }
+.help-tab:hover { background:rgba(255,255,255,0.22); color:white; }
+.help-tab-active { background:white; color:#1e3a5f; border-color:white; }
+.help-panel { }
+.help-intro { font-size:0.85rem; color:#4a5568; line-height:1.6; margin-bottom:4px; }
+.help-intro-sm { font-size:0.84rem; color:#4a5568; line-height:1.6; margin-bottom:14px; }
+.help-h3 { font-size:0.96rem; font-weight:700; color:#1e3a5f; margin-bottom:8px; }
+.help-h4 { font-size:0.86rem; font-weight:700; color:#2d6a9f; margin-bottom:8px; }
+.help-card { border-radius:10px; overflow:hidden; border:1px solid #e2e8f0; }
+.help-card-head { padding:9px 14px; color:white; font-size:0.84rem; font-weight:700; }
+.help-card-body { padding:12px 14px; font-size:0.8rem; color:#4a5568; line-height:1.55; }
+.help-card-body p { margin-bottom:8px; }
+.help-list { padding-left:16px; margin:6px 0; }
+.help-list li { margin-bottom:4px; font-size:0.79rem; }
+.help-steps { display:flex; flex-direction:column; gap:10px; margin:14px 0; }
+.help-step { display:flex; gap:12px; align-items:flex-start; font-size:0.83rem; color:#2d3748; line-height:1.55; }
+.help-step-num { flex-shrink:0; width:26px; height:26px; border-radius:50%; background:#2d6a9f; color:white; font-size:0.78rem; font-weight:700; display:flex; align-items:center; justify-content:center; margin-top:1px; }
+.help-tip { background:#ebf8ff; border-left:4px solid #4299e1; border-radius:0 6px 6px 0; padding:10px 14px; font-size:0.81rem; color:#2c5282; line-height:1.55; margin-top:14px; }
+.help-col-table { border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; font-size:0.79rem; }
+.help-col-header { background:#2d6a9f !important; color:white !important; font-weight:700; }
+.help-col-header > div { color:white !important; }
+.help-col-row { display:grid; grid-template-columns:140px 1fr 1fr; gap:0; border-bottom:1px solid #e2e8f0; }
+.help-col-row:last-child { border-bottom:none; }
+.help-col-row > div { padding:8px 10px; border-right:1px solid #e2e8f0; line-height:1.45; color:#2d3748; }
+.help-col-row > div:last-child { border-right:none; color:#718096; }
+.help-col-name { font-weight:700; color:#1e3a5f !important; white-space:nowrap; }
+
+/* ── MODE SELECTOR CARDS ── */
+.mode-card { display:flex; flex-direction:column; gap:5px; border:2px solid #cbd5e0; border-radius:10px; padding:14px 16px; cursor:pointer; transition:all 0.18s; background:white; user-select:none; }
+.mode-card:hover { border-color:#2d6a9f; background:#f7fafc; }
+.mode-card-active { border-color:#2d6a9f; background:#ebf4ff; }
+.mode-card-icon { font-size:1.4rem; }
+.mode-card-title { font-size:0.9rem; font-weight:700; color:#1e3a5f; }
+.mode-card-desc { font-size:0.75rem; color:#718096; line-height:1.5; }
+
+/* ── MODE BADGE in banner ── */
+.mode-badge { display:inline-flex; align-items:center; gap:4px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); border-radius:6px; padding:2px 8px; font-size:0.72rem; font-weight:600; color:rgba(255,255,255,0.9); margin-left:10px; }
+
+/* ── ADVANCED-ONLY COLUMN HIGHLIGHT ── */
+thead th.adv-col { background:#276749 !important; }
+
+/* ── AP BADGE ── */
+.ap-h { background:#e53e3e; color:white; border-radius:5px; padding:2px 7px; font-size:0.75rem; font-weight:700; display:inline-block; }
+.ap-m { background:#ed8936; color:white; border-radius:5px; padding:2px 7px; font-size:0.75rem; font-weight:700; display:inline-block; }
+.ap-l { background:#38a169; color:white; border-radius:5px; padding:2px 7px; font-size:0.75rem; font-weight:700; display:inline-block; }
+
+/* ── STATUS SELECT ── */
+.status-sel { width:100%; border:1px solid transparent; border-radius:4px; padding:3px 5px; font-size:0.75rem; font-family:inherit; background:transparent; cursor:pointer; }
+.status-sel:focus { outline:none; border-color:#2d6a9f; background:white; }
+.status-open { color:#c05621; font-weight:700; }
+.status-pending { color:#2b6cb0; font-weight:700; }
+.status-impl { color:#6b46c1; font-weight:700; }
+.status-done { color:#276749; font-weight:700; }
+.status-na { color:#718096; }
+
+/* ── SOxO CELL ── */
+.sxo-cell { text-align:center; font-weight:700; font-size:0.82rem; }
+
+/* ── COST ESTIMATOR ── */
+.cost-bar { margin-top: 14px; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.cost-bar-empty { color: #a0aec0; font-size: 0.82rem; font-style: italic; }
+.cost-meter { flex: 1; min-width: 160px; }
+.cost-meter-label { font-size: 0.72rem; color: #718096; margin-bottom: 4px; display: flex; justify-content: space-between; }
+.cost-meter-bar { height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; }
+.cost-meter-fill { height: 100%; border-radius: 3px; transition: width 0.3s, background 0.3s; }
+.cost-stat { text-align: center; flex-shrink: 0; }
+.cost-stat-val { font-size: 1.05rem; font-weight: 700; color: #1e3a5f; }
+.cost-stat-lbl { font-size: 0.68rem; color: #718096; margin-top: 1px; }
+.cost-divider { width: 1px; height: 36px; background: #e2e8f0; flex-shrink: 0; }
+.cost-tip { font-size: 0.72rem; color: #718096; line-height: 1.5; flex-basis: 100%; margin-top: 4px; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+.cost-tip strong { color: #2d6a9f; }
+
+
+/* ── AI REVIEW SCREEN ── */
+.review-overlay { display:none; position:fixed; inset:0; z-index:8000; background:#f0f4f8; overflow-y:auto; flex-direction:column; }
+.review-overlay.open { display:flex; }
+.review-header { background:linear-gradient(135deg,#1e3a5f,#2d6a9f); color:white; padding:14px 28px; display:flex; align-items:center; gap:16px; flex-shrink:0; box-shadow:0 2px 8px rgba(0,0,0,0.2); }
+.review-header h2 { font-size:1rem; font-weight:700; margin:0; }
+.review-header-sub { font-size:0.78rem; opacity:0.75; }
+.review-progress { flex:1; max-width:260px; }
+.review-progress-bar { height:6px; background:rgba(255,255,255,0.2); border-radius:3px; overflow:hidden; margin-top:4px; }
+.review-progress-fill { height:100%; background:#68d391; border-radius:3px; transition:width 0.3s; }
+.review-progress-lbl { font-size:0.72rem; opacity:0.8; display:flex; justify-content:space-between; }
+.review-actions-hdr { display:flex; gap:8px; margin-left:auto; }
+
+.review-body { flex:1; max-width:1000px; width:100%; margin:0 auto; padding:24px 20px; display:flex; flex-direction:column; gap:14px; }
+
+.review-card { background:white; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.07); border:2px solid transparent; transition:border-color 0.2s; overflow:hidden; }
+.review-card.accepted { border-color:#48bb78; }
+.review-card.rejected { border-color:#fc8181; opacity:0.55; }
+.review-card.editing  { border-color:#2d6a9f; box-shadow:0 4px 20px rgba(45,106,159,0.18); }
+
+.review-card-header { display:flex; align-items:center; gap:10px; padding:10px 16px; background:#f7fafc; border-bottom:1px solid #e2e8f0; }
+.review-card-num { width:26px; height:26px; border-radius:50%; background:#2d6a9f; color:white; font-size:0.78rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.review-card-title { font-size:0.86rem; font-weight:700; color:#1e3a5f; flex:1; }
+.review-card-rpn { font-size:0.75rem; font-weight:700; border-radius:5px; padding:2px 8px; }
+.review-card-btns { display:flex; gap:6px; }
+.rbtn { border:none; border-radius:6px; padding:5px 12px; font-size:0.76rem; font-weight:600; cursor:pointer; transition:all 0.15s; }
+.rbtn-accept { background:#c6f6d5; color:#276749; } .rbtn-accept:hover,.rbtn-accept.active { background:#48bb78; color:white; }
+.rbtn-edit   { background:#ebf4ff; color:#2b6cb0; } .rbtn-edit:hover,.rbtn-edit.active   { background:#2d6a9f; color:white; }
+.rbtn-reject { background:#fff5f5; color:#c53030; } .rbtn-reject:hover,.rbtn-reject.active { background:#fc8181; color:white; }
+
+.review-card-body { padding:14px 16px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+.review-field { }
+.review-field-label { font-size:0.68rem; font-weight:700; color:#718096; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:3px; }
+.review-field-val { font-size:0.82rem; color:#2d3748; line-height:1.5; }
+.review-field-edit textarea, .review-field-edit input { width:100%; border:1.5px solid #2d6a9f; border-radius:6px; padding:5px 8px; font-size:0.82rem; font-family:inherit; resize:vertical; min-height:48px; background:#f7fbff; }
+.review-field-edit input { min-height:auto; resize:none; }
+.review-scores { display:flex; gap:8px; align-items:center; }
+.review-score-inp { width:46px; border:1.5px solid #2d6a9f; border-radius:6px; padding:4px 6px; font-size:0.82rem; text-align:center; font-family:inherit; }
+
+.review-footer { background:white; border-top:1px solid #e2e8f0; padding:14px 28px; display:flex; align-items:center; gap:12px; flex-shrink:0; }
+.review-footer-stats { font-size:0.82rem; color:#718096; flex:1; }
+.review-footer-stats strong { color:#1e3a5f; }
+
+
+/* ── COLUMN TOGGLE BUTTONS ── */
+.col-toggle { background:rgba(255,255,255,0.18); color:rgba(255,255,255,0.9); border:1px solid rgba(255,255,255,0.3); transition:all 0.15s; }
+.col-toggle:hover { background:rgba(255,255,255,0.28); }
+.col-toggle.col-hidden { background:rgba(0,0,0,0.25); color:rgba(255,255,255,0.45); border-color:rgba(255,255,255,0.15); text-decoration:line-through; }
+
+/* ── INCIDENTS ── */
+.inc-toolbar { padding: 14px 18px; background: #1e3a5f; color: white; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; border-radius: 12px 12px 0 0; }
+.inc-toolbar h2 { font-size: 0.92rem; font-weight: 600; }
+.inc-list { display: flex; flex-direction: column; gap: 0; }
+.inc-card { background: white; border-bottom: 1px solid #e2e8f0; padding: 16px 20px; display: grid; grid-template-columns: 180px 1fr 200px 120px 60px; gap: 14px; align-items: start; transition: background 0.15s; }
+.inc-card:hover { background: #f7fafc; }
+.inc-card:last-child { border-bottom: none; border-radius: 0 0 12px 12px; }
+.inc-field-label { font-size: 0.7rem; font-weight: 700; color: #718096; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 3px; }
+.inc-ts { font-size: 0.82rem; font-weight: 700; color: #1e3a5f; }
+.inc-desc { font-size: 0.82rem; color: #2d3748; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.inc-link-badge { display: inline-flex; align-items: center; gap: 5px; background: #ebf4ff; border: 1px solid #bee3f8; border-radius: 6px; padding: 3px 9px; font-size: 0.74rem; color: #2b6cb0; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inc-link-none { font-size: 0.74rem; color: #a0aec0; font-style: italic; }
+.inc-actions { display: flex; flex-direction: column; gap: 5px; }
+.inc-del-btn { background: none; border: none; cursor: pointer; color: #fc8181; font-size: 0.85rem; padding: 3px 7px; border-radius: 4px; }
+.inc-del-btn:hover { background: #fff5f5; color: #e53e3e; }
+.inc-edit-btn { background: none; border: 1px solid #bee3f8; cursor: pointer; color: #2b6cb0; font-size: 0.75rem; padding: 3px 7px; border-radius: 4px; font-weight: 600; }
+.inc-edit-btn:hover { background: #ebf4ff; }
+.inc-empty { padding: 60px 20px; text-align: center; color: #a0aec0; background: white; border-radius: 0 0 12px 12px; }
+.inc-empty p { margin-top: 10px; font-size: 0.9rem; }
+
+/* Incident Modal */
+.inc-modal { background: white; border-radius: 14px; padding: 28px 32px; width: 90%; max-width: 560px; box-shadow: 0 16px 48px rgba(0,0,0,0.2); }
+.inc-modal h3 { font-size: 1.05rem; font-weight: 700; color: #1e3a5f; margin-bottom: 20px; }
+.inc-modal .field { margin-bottom: 14px; }
+.inc-modal .field label { display: block; font-size: 0.82rem; font-weight: 600; color: #4a5568; margin-bottom: 5px; }
+.inc-modal .field label .req { color: #e53e3e; }
+.inc-modal textarea { width: 100%; border: 1.5px solid #cbd5e0; border-radius: 8px; padding: 9px 12px; font-size: 0.86rem; resize: vertical; min-height: 90px; font-family: inherit; color: #2d3748; }
+.inc-modal textarea:focus { outline: none; border-color: #2d6a9f; box-shadow: 0 0 0 3px rgba(45,106,159,0.1); }
+.inc-modal input[type=datetime-local] { width: 100%; border: 1.5px solid #cbd5e0; border-radius: 8px; padding: 9px 12px; font-size: 0.86rem; font-family: inherit; }
+.inc-modal input[type=datetime-local]:focus { outline: none; border-color: #2d6a9f; box-shadow: 0 0 0 3px rgba(45,106,159,0.1); }
+.inc-modal select { width: 100%; border: 1.5px solid #cbd5e0; border-radius: 8px; padding: 9px 12px; font-size: 0.86rem; font-family: inherit; background: white; color: #2d3748; }
+.inc-modal select:focus { outline: none; border-color: #2d6a9f; }
+.inc-fmea-preview { margin-top: 6px; font-size: 0.76rem; color: #718096; min-height: 16px; }
+.inc-err { color: #e53e3e; font-size: 0.8rem; margin-bottom: 10px; min-height: 16px; }
+.inc-upload-area { border: 2px dashed #a0bcd8; border-radius: 8px; padding: 14px; text-align: center; cursor: pointer; background: #f7fafc; transition: all 0.2s; font-size: 0.82rem; color: #718096; }
+.inc-upload-area:hover { border-color: #2d6a9f; background: #ebf4ff; }
+.inc-file-name { margin-top: 6px; font-size: 0.76rem; color: #2b6cb0; font-weight: 600; }
+
+/* Guidelines */
+.guide-section { background: white; border-radius: 12px; padding: 22px 26px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); margin-bottom: 20px; overflow-x: auto; }
+.guide-section h2 { font-size: 0.95rem; font-weight: 700; color: #1e3a5f; margin-bottom: 16px; }
+.guide-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; min-width: 820px; }
+.guide-col-head { background: #1e3a5f; color: white; padding: 7px 10px; border-radius: 6px 6px 0 0; font-weight: 700; font-size: 0.84rem; }
+.guide-table { border-collapse: collapse; width: 100%; font-size: 0.73rem; }
+.guide-table th { background: #2d6a9f; color: white; padding: 5px 7px; text-align: left; font-weight: 600; }
+.guide-table td { padding: 4px 7px; color: #2d3748; vertical-align: top; border-bottom: 1px solid #e2e8f0; }
+.rank-badge { display: inline-block; border-radius: 4px; padding: 2px 7px; font-weight: 700; color: white; font-size: 0.73rem; }
+</style>
+</head>
+<body>
+
+<div id="resizeLine"></div>
+
+<!-- ═══════════════════════════════════════════════════
+     LOGIN SCREEN
+════════════════════════════════════════════════════ -->
+<div class="screen active" id="screenLogin">
+  <div class="login-bg">
+    <div class="login-card">
+      <div class="login-logo">
+        <svg width="36" height="36" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="6" fill="#1e3a5f"/><path d="M6 8h16M6 14h10M6 20h13" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="21" cy="20" r="4" fill="#48bb78"/><path d="M19.5 20l1 1 2-2" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div>
+          <h1>AI-Powered FMEA Tool</h1>
+          <small>Designed by Andrzej Grzegorczyk</small>
+        </div>
+      </div>
+      <h2>Sign in to continue</h2>
+      <div class="field"><label>Username</label><input type="text" id="loginUser" placeholder="Enter username" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="field"><label>Password</label><input type="password" id="loginPass" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="login-err" id="loginErr"></div>
+      <button class="btn-login" onclick="doLogin()">Sign In</button>
+      <div class="login-hint">Default: admin / fmea2024</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     DASHBOARD SCREEN
+════════════════════════════════════════════════════ -->
+<div class="screen" id="screenDash">
+  <header>
+    <div class="header-title">
+      <svg width="24" height="24" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="6" fill="rgba(255,255,255,0.15)"/><path d="M6 8h16M6 14h10M6 20h13" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="21" cy="20" r="4" fill="#48bb78"/><path d="M19.5 20l1 1 2-2" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div><h1>AI-Powered FMEA Tool</h1><small>Designed by Andrzej Grzegorczyk</small></div>
+    </div>
+    <div class="header-right">
+      <span class="header-user" id="dashUserLabel"></span>
+      <button class="btn-hdr" onclick="printAllProjectsReport()">📄 All Projects Report</button>
+      <button class="btn-hdr" onclick="doLogout()">Sign Out</button>
+    </div>
+  </header>
+  <div class="dash-main">
+    <div class="dash-toolbar">
+      <h2>📁 My FMEA Projects</h2>
+      <button class="btn btn-primary" onclick="openNewProjectModal()">+ New Project</button>
+    </div>
+    <div id="projGrid" class="proj-grid"></div>
+    <div class="empty-dash" id="emptyDash" style="display:none">
+      <svg width="56" height="56" viewBox="0 0 48 48"><rect x="6" y="4" width="36" height="40" rx="5" fill="#e2e8f0"/><path d="M14 16h20M14 22h12M14 28h15" stroke="#a0aec0" stroke-width="2" stroke-linecap="round"/></svg>
+      <p>No projects yet. Create your first FMEA project!</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     WORKSPACE SCREEN
+════════════════════════════════════════════════════ -->
+<div class="screen" id="screenWork">
+  <header>
+    <div class="header-top-row">
+      <div class="header-title">
+        <svg width="24" height="24" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="6" fill="rgba(255,255,255,0.15)"/><path d="M6 8h16M6 14h10M6 20h13" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="21" cy="20" r="4" fill="#48bb78"/><path d="M19.5 20l1 1 2-2" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div><h1>AI-Powered FMEA Tool</h1><small>Designed by Andrzej Grzegorczyk</small></div>
+      </div>
+      <div class="header-right">
+        <span class="header-user" id="workUserLabel"></span>
+        <button class="btn-hdr" onclick="printProjectReport()">📄 Project Report</button>
+        <button class="btn-hdr" onclick="goToDashboard()">◀ Projects</button>
+        <button class="btn-hdr" onclick="doLogout()">Sign Out</button>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab" id="tab-upload"    onclick="switchTab('upload')">📄 Upload &amp; Analyze</button>
+      <button class="tab" id="tab-fmea"      onclick="switchTab('fmea')">📋 FMEA Worksheet <span class="badge" id="rowBadge">0</span></button>
+      <button class="tab" id="tab-incidents" onclick="switchTab('incidents')">⚠️ Incidents <span class="badge" id="incBadge">0</span></button>
+      <button class="tab" id="tab-guide"     onclick="switchTab('guide')">📊 Guidelines</button>
+    </div>
+  </header>
+
+  <div class="proj-banner">
+    <div>
+      <div class="proj-banner-name" id="bannerName"></div>
+      <div class="proj-banner-desc" id="bannerDesc"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+      <span class="mode-badge" id="modeBadge"></span>
+      <button style="background:rgba(45,106,159,0.12);border:1px solid #bee3f8;color:#2b6cb0;border-radius:6px;padding:3px 10px;font-size:0.74rem;font-weight:600;cursor:pointer" onclick="openProjectSettings()">⚙ Header</button>
+      <div class="proj-banner-save" id="bannerSave"></div>
+    </div>
+  </div>
+
+  <div class="workspace">
+    <div class="ws-main" id="wsMain">
+
+      <!-- Upload Panel -->
+      <div id="panel-upload">
+        <div class="upload-card">
+          <h2>📄 Upload Documents &amp; Generate FMEA</h2>
+          <div class="upload-area" id="dropZone">
+            <svg width="32" height="32" viewBox="0 0 40 40" fill="none"><path d="M20 8v16M13 15l7-7 7 7" stroke="#2d6a9f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 28h24" stroke="#a0bcd8" stroke-width="2" stroke-linecap="round"/></svg>
+            <p><strong>Click to upload</strong> or drag &amp; drop</p>
+            <p>TXT files work best. For PDF — paste the text below instead.</p>
+            <input type="file" id="fileInput" multiple accept=".pdf,.txt,.text" style="display:none">
+          </div>
+          <div class="file-list" id="fileList"></div>
+          <textarea class="doc-textarea" id="manualText" placeholder="Paste your document text here (recommended for PDFs — open the PDF, select all text, copy and paste it here)..." oninput="updateCostEstimator()"></textarea>
+          <div class="controls">
+            <button class="btn btn-primary" id="analyzeBtn" onclick="analyze()">🔍 Analyze &amp; Generate FMEA</button>
+            <button class="btn btn-secondary" onclick="addRow();switchTab('fmea')">+ Add Row Manually</button>
+            <button class="btn btn-danger" onclick="clearAll()">🗑 Clear All</button>
+            <span class="status" id="status"></span>
+          </div>
+          <div class="cost-bar" id="costBar">
+            <span class="cost-bar-empty">Add a document above to see estimated token usage and cost.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- FMEA Panel -->
+      <div id="panel-fmea" style="display:none">
+        <div class="table-card">
+          <div class="table-header">
+            <h2>FMEA Worksheet</h2>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              <button class="btn-sm btn-blue"   onclick="addRow()">+ Row</button>
+              <button class="btn-sm btn-green"  onclick="exportCSV()">⬇ CSV</button>
+              <button class="btn-sm btn-orange" onclick="exportJSON()">⬇ JSON</button>
+              <button class="btn-sm btn-purple" onclick="triggerImport()">⬆ Import JSON</button>
+              <input type="file" id="importInput" accept=".json" style="display:none" onchange="importJSON(this)">
+              <div style="width:1px;height:20px;background:rgba(255,255,255,0.2);margin:0 2px"></div>
+              <button class="btn-sm col-toggle" id="toggleCauseBtn"  onclick="toggleColumn('cause')"  title="Show/hide Cause column">Cause ✓</button>
+              <button class="btn-sm col-toggle" id="toggleActionBtn" onclick="toggleColumn('action')" title="Show/hide Action column">Action ✓</button>
+            </div>
+          </div>
+          <div class="search-bar">
+            <div class="search-input-wrap">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6" stroke="#a0aec0" stroke-width="2"/><path d="M13.5 13.5l3 3" stroke="#a0aec0" stroke-width="2" stroke-linecap="round"/></svg>
+              <input type="text" class="search-input" id="searchInput" placeholder="Search failure modes, causes, effects…" oninput="applySearch()">
+            </div>
+            <div class="search-filter-group">
+              <span class="filter-label">RPN:</span>
+              <button class="filter-btn f-all active" data-filter="all"  onclick="setRpnFilter('all')">All</button>
+              <button class="filter-btn f-low"        data-filter="low"  onclick="setRpnFilter('low')">Low &lt;50</button>
+              <button class="filter-btn f-med"        data-filter="med"  onclick="setRpnFilter('med')">Medium 50–99</button>
+              <button class="filter-btn f-high"       data-filter="high" onclick="setRpnFilter('high')">High 100–199</button>
+              <button class="filter-btn f-crit"       data-filter="crit" onclick="setRpnFilter('crit')">Critical ≥200</button>
+            </div>
+            <span class="search-count" id="searchCount"></span>
+            <button class="search-clear" id="searchClearBtn" onclick="clearSearch()" title="Clear search" style="display:none">✕</button>
+          </div>
+          <div class="table-wrap">
+            <table id="fmeaTable"><colgroup id="colGroup"></colgroup><thead><tr id="headerRow"></tr></thead><tbody id="fmeaBody"></tbody></table>
+            <div class="empty-state" id="emptyState">
+              <svg width="42" height="42" viewBox="0 0 48 48"><rect x="8" y="6" width="32" height="36" rx="4" fill="#e2e8f0"/><path d="M16 18h16M16 24h10M16 30h13" stroke="#a0aec0" stroke-width="2" stroke-linecap="round"/></svg>
+              <p>No failure modes yet. Go to <strong>Upload &amp; Analyze</strong> or add a row manually.</p>
+            </div>
+          </div>
+          <div class="legend">
+            <div class="legend-item"><div class="legend-dot rpn-low"></div>RPN &lt;50 Low</div>
+            <div class="legend-item"><div class="legend-dot rpn-med"></div>50–99 Medium</div>
+            <div class="legend-item"><div class="legend-dot rpn-high"></div>100–199 High</div>
+            <div class="legend-item"><div class="legend-dot rpn-critical"></div>≥200 Critical</div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Incidents Panel -->
+      <div id="panel-incidents" style="display:none">
+        <div class="table-card" style="border-radius:12px;overflow:hidden">
+          <div class="inc-toolbar">
+            <h2>⚠️ Incident Log</h2>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              <span style="font-size:0.76rem;opacity:0.7" id="incCountLabel"></span>
+              <button class="btn-sm btn-blue" onclick="openIncidentModal()">+ Add Incident</button>
+              <button class="btn-sm btn-green" onclick="exportIncidentsCSV()">⬇ CSV</button>
+              <button class="btn-sm btn-orange" onclick="triggerIncidentImport()">⬆ Import</button>
+              <input type="file" id="incImportInput" accept=".json,.csv" style="display:none" onchange="importIncidents(this)">
+            </div>
+          </div>
+          <div id="incList" class="inc-list">
+            <div class="inc-empty" id="incEmpty">
+              <svg width="42" height="42" viewBox="0 0 48 48"><circle cx="24" cy="24" r="18" fill="#e2e8f0"/><path d="M24 14v12M24 30v2" stroke="#a0aec0" stroke-width="2.5" stroke-linecap="round"/></svg>
+              <p>No incidents recorded. Click <strong>+ Add Incident</strong> to log one.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Guidelines Panel -->
+      <div id="panel-guide" style="display:none">
+
+      <!-- User Guide Section (top of Guidelines panel) -->
+      <div class="guide-section" style="padding:0;overflow:hidden">
+        <div style="background:#1e3a5f;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <h2 style="color:white;font-size:0.95rem;margin:0">📖 User Guide</h2>
+          <div style="display:flex;gap:6px">
+            <button id="help-tab-overview"  class="help-tab help-tab-active" onclick="switchHelpTab('overview')">Overview</button>
+            <button id="help-tab-simple"    class="help-tab" onclick="switchHelpTab('simple')">⚡ Simplified</button>
+            <button id="help-tab-advanced"  class="help-tab" onclick="switchHelpTab('advanced')">🔬 Advanced</button>
+            <button id="help-tab-incidents" class="help-tab" onclick="switchHelpTab('incidents-help')">⚠️ Incidents</button>
+          </div>
+        </div>
+
+        <!-- OVERVIEW -->
+        <div id="help-overview" class="help-panel" style="padding:22px 26px">
+          <div class="help-intro">
+            <p>This tool helps you identify, assess, and track failure modes in your processes or equipment. Choose between two modes when creating a project, based on your team's needs and time available.</p>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:18px 0">
+            <div class="help-card">
+              <div class="help-card-head" style="background:#2d6a9f">⚡ Simplified Mode</div>
+              <div class="help-card-body">
+                <p>Best for quick risk assessments, small teams, or first-time FMEA users. Covers the essentials: identify what can go wrong, rate the risk, and assign corrective actions.</p>
+                <ul class="help-list">
+                  <li>Core columns: Process Step, Failure Mode, Effect, Cause, S / O / D, RPN</li>
+                  <li>Action tracking: owner, due date, % complete</li>
+                  <li>Incident linking and count</li>
+                  <li>AI-powered failure mode generation from uploaded documents</li>
+                </ul>
+              </div>
+            </div>
+            <div class="help-card">
+              <div class="help-card-head" style="background:#276749">🔬 Advanced Mode</div>
+              <div class="help-card-body">
+                <p>Full AIAG/VDA-aligned workflow for formal engineering teams. Adds deeper analysis columns and post-action re-assessment to close the full risk loop.</p>
+                <ul class="help-list">
+                  <li>Everything in Simplified, plus:</li>
+                  <li>Action Priority (AP): H / M / L per AIAG/VDA</li>
+                  <li>S×O: severity-occurrence exposure index</li>
+                  <li>Prevention &amp; Detection actions split</li>
+                  <li>Action Status (Open → Completed)</li>
+                  <li>Revised S / O / D and RPN after action</li>
+                  <li>Source traceability and Notes</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="help-steps">
+            <div class="help-step"><span class="help-step-num">1</span><div><b>Create a project</b> — click <em>+ New Project</em> on the dashboard, enter a name, and choose Simplified or Advanced mode.</div></div>
+            <div class="help-step"><span class="help-step-num">2</span><div><b>Add failure modes</b> — upload a document and click <em>Analyze &amp; Generate FMEA</em> to let AI extract failure modes, or add rows manually.</div></div>
+            <div class="help-step"><span class="help-step-num">3</span><div><b>Rate each failure</b> — score Severity (S), Occurrence (O), and Detection (D) from 1–10. RPN = S × O × D is calculated automatically.</div></div>
+            <div class="help-step"><span class="help-step-num">4</span><div><b>Assign actions</b> — for high-RPN items, describe corrective actions, assign an owner, and set a due date.</div></div>
+            <div class="help-step"><span class="help-step-num">5</span><div><b>Log incidents</b> — use the Incidents tab to record real-world failures. Link them to FMEA rows to validate your Occurrence ratings.</div></div>
+            <div class="help-step"><span class="help-step-num">6</span><div><b>Track &amp; export</b> — monitor % complete per row. Export to CSV for reporting or import JSON to continue work later.</div></div>
+          </div>
+          <div class="help-tip">💡 <b>Tip:</b> Data is saved automatically to your browser. Use <em>Export JSON</em> regularly to back up your work, and <em>Import JSON</em> to restore it.</div>
+        </div>
+
+        <!-- SIMPLIFIED -->
+        <div id="help-simple" class="help-panel" style="display:none;padding:22px 26px">
+          <h3 class="help-h3">⚡ Simplified Mode — Step by Step</h3>
+          <p class="help-intro-sm">Simplified mode focuses on the core FMEA loop: identify failures → rate risk → act. Every column is essential; nothing is optional noise.</p>
+
+          <div class="help-col-table">
+            <div class="help-col-row help-col-header">
+              <div>Column</div><div>What to enter</div><div>Tips</div>
+            </div>
+            <div class="help-col-row">
+              <div class="help-col-name">#</div>
+              <div>Auto-assigned row number</div>
+              <div>Used for referencing rows in discussions and reports</div>
+            </div>
+            <div class="help-col-row">
+              <div class="help-col-name">Process Step</div>
+              <div>The step, subsystem, or function being analysed</div>
+              <div>Be specific — e.g. "Gas flow control valve" not just "Valve"</div>
+            </div>
+            <div class="help-col-row">
+              <div class="help-col-name">Failure Mode</div>
+              <div>How the step could fail — the physical failure</div>
+              <div>e.g. "Valve stuck closed", "Seal leak", "Sensor drift"</div>
+            </div>
+            <div class="help-col-row">
+              <div class="help-col-name">Effect</div>
+              <div>What happens to the customer / process if this failure occurs</div>
+              <div>Think downstream impact: "Process stops", "Yield loss &gt;30%"</div>
+            </div>
+            <div class="help-col-row">
+              <div class="help-col-name">Cause</div>
+              <div>Root cause of the failure mode</div>
+              <div>Use "5 Whys" thinking — go one level deeper than the obvious</div>
+            </div>
+            <div class="help-col-row">
+              <div class="help-col-name">S (Severity)</div>
+              <div>Rate 1–10: how bad is the effect if it happens?</div>
+              <div>10 = safety/regulatory, 7 = major damage, 4 = minor, 1 = no effect. <b>Never lower S just because a fix exists.</b></div>
+            </div>
+            <div class="help-col-row">
+              <div class="help-col-name">O (Occurrence)</div>
+              <div>Rate 1–10: how often does this cause occur?</div>
+              <div>Use MTBF data or incident count if available. Incident badges help calibrate this score.</div>
+            </div>
+            <div class="help-col-row">
+              <div class="help-col-name">D (Detection)</div>
+              <div>Rate 1–10: how hard is it to detect before impact?</div>
+              <div>10 = impossible to detect, 1 = automatic alarm always fires. Lower is better.</div>
+            </div>
+            <div class="help-col-row" style="background:#fff5f5">
+              <div class="help-col-name">RPN</div>
+              <div>S × O × D — calculated automatically</div>
+              <div><span class="rpn-low" style="border-radius:4px;padding:1px 6px">&lt;50 Low</span> <span class="rpn-med" style="border-radius:4px;padding:1px 6px">50–99 Med</span> <span class="rpn-high" style="border-radius:4px;padding:1px 6px">100–199 High</span> <span class="rpn-critical" style="border-radius:4px;padding:1px 6px">≥200 Critical</span></div>
+            </div>
+            <div class="help-col-row">
+              <div class="help-col-name">Inc.</div>
+              <div>Count of real incidents linked to this row</div>
+              <div>Higher count = real-world evidence that O score may need to increase</div>
+            </div>
+            <div class="help-col-row">
+              <div class="help-col-name">Action</div>
+              <div>Corrective or preventive action to reduce risk</div>
+              <div>Focus on reducing S (redesign), O (prevention), or D (detection improvement)</div>
+            </div>
+            <div class="help-col-row">
+              <div class="help-col-name">Action Owner</div>
+              <div>Person responsible for implementing the action</div>
+              <div>Must be a named individual, not a department</div>
+            </div>
+            <div class="help-col-row">
+              <div class="help-col-name">Action Due Date</div>
+              <div>Target completion date</div>
+              <div>Set realistic dates aligned with your project milestones</div>
+            </div>
+            <div class="help-col-row">
+              <div class="help-col-name">% Complete</div>
+              <div>Progress on the action (0–100%)</div>
+              <div>Update as the action progresses. Bar turns green at 100%.</div>
+            </div>
+            <div class="help-col-row">
+              <div class="help-col-name">Incidents</div>
+              <div>INC-# badges for linked incidents</div>
+              <div>Click any badge to jump to the Incidents tab. ⚠️ button on each row opens a new incident pre-linked to that row.</div>
+            </div>
+          </div>
+
+          <div class="help-tip" style="margin-top:18px">💡 <b>When to act:</b> Prioritise rows with RPN ≥ 100 (High) or any row with S ≥ 9 regardless of RPN — a catastrophic but rare failure still warrants a plan.</div>
+        </div>
+
+        <!-- ADVANCED -->
+        <div id="help-advanced" class="help-panel" style="display:none;padding:22px 26px">
+          <h3 class="help-h3">🔬 Advanced Mode — Step by Step</h3>
+          <p class="help-intro-sm">Advanced mode follows the AIAG &amp; VDA FMEA Handbook 7-step process. It adds Action Priority (AP), which is the AIAG/VDA replacement for RPN as the primary decision tool, plus post-action re-assessment to close the risk loop.</p>
+
+          <h4 class="help-h4">Additional columns (beyond Simplified)</h4>
+          <div class="help-col-table">
+            <div class="help-col-row help-col-header"><div>Column</div><div>What to enter</div><div>Tips</div></div>
+            <div class="help-col-row" style="background:#f0fff4">
+              <div class="help-col-name">S×O</div>
+              <div>Severity × Occurrence — auto-calculated</div>
+              <div>Highlights high-risk exposure independent of detection. Use alongside AP to prioritise when detection is uncertain.</div>
+            </div>
+            <div class="help-col-row" style="background:#f0fff4">
+              <div class="help-col-name">AP</div>
+              <div>Action Priority: H / M / L — auto-calculated per AIAG/VDA</div>
+              <div><span class="ap-h">H</span> = must act &amp; justify. <span class="ap-m">M</span> = should act or document why not. <span class="ap-l">L</span> = review and consider. AP weights S first, then O, then D — unlike RPN which treats all equally.</div>
+            </div>
+            <div class="help-col-row">
+              <div class="help-col-name">Source</div>
+              <div>Document and page that identifies this failure mode</div>
+              <div>Links the FMEA row to the source document uploaded in the Analyze tab. Supports audit traceability.</div>
+            </div>
+            <div class="help-col-row" style="background:#f0fff4">
+              <div class="help-col-name">Prevention Action</div>
+              <div>Action that prevents the failure cause from occurring</div>
+              <div>e.g. "Change material spec", "Add process interlock". Targets O reduction.</div>
+            </div>
+            <div class="help-col-row" style="background:#f0fff4">
+              <div class="help-col-name">Detection Action</div>
+              <div>Action that improves ability to detect the failure</div>
+              <div>e.g. "Install pressure sensor alarm", "Add 100% visual inspection". Targets D reduction.</div>
+            </div>
+            <div class="help-col-row">
+              <div class="help-col-name">Action</div>
+              <div>General corrective action (same as Simplified)</div>
+              <div>Use for actions that don't neatly fit Prevention or Detection categories</div>
+            </div>
+            <div class="help-col-row" style="background:#f0fff4">
+              <div class="help-col-name">Status</div>
+              <div>Select from: Open / Decision Pending / Implementation Pending / Completed / Not Implemented</div>
+              <div>An FMEA is not complete until every row is either Completed or Not Implemented with justification. Open = no action defined yet.</div>
+            </div>
+            <div class="help-col-row">
+              <div class="help-col-name">rS / rO / rD</div>
+              <div>Revised S, O, D scores after action is implemented</div>
+              <div>Only fill in once action Status = Completed. Do <b>not</b> modify original S/O/D — keep them as the historical baseline.</div>
+            </div>
+            <div class="help-col-row">
+              <div class="help-col-name">rRPN</div>
+              <div>Revised RPN = rS × rO × rD — auto-calculated</div>
+              <div>Compare to original RPN to confirm the action was effective. If rRPN is still high, further action is needed.</div>
+            </div>
+            <div class="help-col-row">
+              <div class="help-col-name">Notes</div>
+              <div>Internal team comments, context, or "pointer to evidence"</div>
+              <div>Use to reference test reports, photos, or decision papers that justify your ratings</div>
+            </div>
+          </div>
+
+          <h4 class="help-h4" style="margin-top:20px">AP — Action Priority explained</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:10px 0 16px">
+            <div style="border:2px solid #e53e3e;border-radius:8px;padding:12px">
+              <div style="font-size:1rem;font-weight:700;color:#e53e3e;margin-bottom:6px"><span class="ap-h">H</span> High Priority</div>
+              <p style="font-size:0.78rem;color:#4a5568">Team <b>must</b> identify actions to improve prevention or detection, or formally justify and document why current controls are adequate. Mandatory review by management for S ≥ 9.</p>
+            </div>
+            <div style="border:2px solid #ed8936;border-radius:8px;padding:12px">
+              <div style="font-size:1rem;font-weight:700;color:#ed8936;margin-bottom:6px"><span class="ap-m">M</span> Medium Priority</div>
+              <p style="font-size:0.78rem;color:#4a5568">Team <b>should</b> identify actions to improve controls, or at the company's discretion, justify why controls are adequate. Don't ignore — document the decision.</p>
+            </div>
+            <div style="border:2px solid #38a169;border-radius:8px;padding:12px">
+              <div style="font-size:1rem;font-weight:700;color:#38a169;margin-bottom:6px"><span class="ap-l">L</span> Low Priority</div>
+              <p style="font-size:0.78rem;color:#4a5568">Team <b>could</b> identify actions to improve controls. Review and determine if any further action is warranted. Document the outcome.</p>
+            </div>
+          </div>
+          <div class="help-tip">⚠️ <b>Important:</b> AP gives more weight to Severity than RPN does. A failure with S=9, O=1, D=1 (RPN=9) still gets AP=H because the consequence is catastrophic. Always check AP alongside RPN.</div>
+        </div>
+
+        <!-- INCIDENTS HELP -->
+        <div id="help-incidents-help" class="help-panel" style="display:none;padding:22px 26px">
+          <h3 class="help-h3">⚠️ Incident Log — How It Works</h3>
+          <p class="help-intro-sm">The Incident Log captures real-world failures and near-misses. Linking incidents to FMEA rows gives you evidence-based data to validate and recalibrate your Occurrence (O) scores over time.</p>
+
+          <div class="help-steps">
+            <div class="help-step">
+              <span class="help-step-num">1</span>
+              <div><b>Log an incident</b> — go to the <em>⚠️ Incidents</em> tab and click <em>+ Add Incident</em>. Or click the <em>⚠️ button</em> on any FMEA row to open the form pre-linked to that row.</div>
+            </div>
+            <div class="help-step">
+              <span class="help-step-num">2</span>
+              <div><b>Fill in the form:</b>
+                <ul class="help-list" style="margin-top:6px">
+                  <li><b>Timestamp</b> — mandatory. Exact date and time the incident occurred.</li>
+                  <li><b>Description</b> — mandatory. What happened, conditions, observations. Be factual.</li>
+                  <li><b>Attach File</b> — optional. Attach a photo, report, or log file for reference.</li>
+                  <li><b>Link to FMEA Row</b> — optional but recommended. Connects the incident to the failure mode it represents. Multiple incidents can link to one row.</li>
+                </ul>
+              </div>
+            </div>
+            <div class="help-step">
+              <span class="help-step-num">3</span>
+              <div><b>Read the FMEA table</b> — linked rows show an <span style="background:#fff5f5;border:1px solid #fed7d7;border-radius:4px;padding:1px 6px;font-size:0.8rem;font-weight:700;color:#c53030">⚠️ INC-#</span> badge in the Incidents column and a coloured count bubble in the Inc. column. Yellow = 1–2, Orange = 3–4, Red = 5+.</div>
+            </div>
+            <div class="help-step">
+              <span class="help-step-num">4</span>
+              <div><b>Use incidents to calibrate O scores</b> — if a row has 3+ real incidents, your original O score may be too optimistic. Review and update it to reflect actual experience.</div>
+            </div>
+            <div class="help-step">
+              <span class="help-step-num">5</span>
+              <div><b>Export</b> — use <em>⬇ CSV</em> in the Incidents tab to export all incidents with their linked FMEA data for reporting or root-cause analysis.</div>
+            </div>
+          </div>
+
+          <div class="help-tip">💡 Each incident has a unique <b>INC-#</b> number that never changes. In Advanced mode, use incident data as your "pointer to evidence" when justifying revised O scores in the rO column.</div>
+        </div>
+      </div>
+
+        <div class="guide-section">
+          <h2>Process FMEA — Rating Guidelines</h2>
+          <div class="guide-grid">
+            <div><div class="guide-col-head">Severity (S)</div>
+              <table class="guide-table"><thead><tr><th>Effect</th><th>Criteria</th><th style="width:42px;text-align:center">Rank</th></tr></thead><tbody>
+                <tr style="background:#fff5f5"><td><b>Safety</b></td><td>Non-compliance with government regulation, without warning</td><td style="text-align:center"><span class="rank-badge" style="background:#e53e3e">10</span></td></tr>
+                <tr style="background:#fff8f5"><td></td><td>Non-compliance with government regulation, with warning</td><td style="text-align:center"><span class="rank-badge" style="background:#fc8181">9</span></td></tr>
+                <tr style="background:#fffaf5"><td><b>Serious</b></td><td>Wafer scrap, product reliability</td><td style="text-align:center"><span class="rank-badge" style="background:#f6ad55">8</span></td></tr>
+                <tr style="background:#fffdf5"><td></td><td>Degradation of primary function; yield loss &gt;50%</td><td style="text-align:center"><span class="rank-badge" style="background:#f6ad55">7</span></td></tr>
+                <tr style="background:#fefff5"><td><b>Moderate</b></td><td>Loss of secondary function; yield loss &gt;30%</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">6</span></td></tr>
+                <tr style="background:#fefff5"><td></td><td>Degradation of secondary function; yield loss &gt;20%</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">5</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>Annoyance</b></td><td>Objectionable appearance; yield loss &gt;10%</td><td style="text-align:center"><span class="rank-badge" style="background:#68d391">4</span></td></tr>
+                <tr style="background:#f0fff4"><td></td><td>Nuisance; slightly objectionable; yield loss &lt;10%</td><td style="text-align:center"><span class="rank-badge" style="background:#68d391">3</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>No effect</b></td><td>Customer does not notice the issue</td><td style="text-align:center"><span class="rank-badge" style="background:#48bb78">2</span></td></tr>
+                <tr style="background:#f0fff4"><td></td><td>No discernible effect</td><td style="text-align:center"><span class="rank-badge" style="background:#38a169">1</span></td></tr>
+              </tbody></table></div>
+            <div><div class="guide-col-head">Occurrence (O)</div>
+              <table class="guide-table"><thead><tr><th>Level</th><th>Criteria</th><th style="width:70px">Incidents</th><th style="width:42px;text-align:center">Rank</th></tr></thead><tbody>
+                <tr style="background:#fff5f5"><td><b>Ext. high</b></td><td>No prevention controls</td><td>≥100k ppm</td><td style="text-align:center"><span class="rank-badge" style="background:#e53e3e">10</span></td></tr>
+                <tr style="background:#fff8f5"><td><b>Very high</b></td><td>Failure inevitable; controls have very little effect</td><td>≥50k ppm</td><td style="text-align:center"><span class="rank-badge" style="background:#fc8181">9</span></td></tr>
+                <tr style="background:#fff8f5"><td></td><td>Failure very likely; controls have little effect</td><td>≥20k ppm</td><td style="text-align:center"><span class="rank-badge" style="background:#f6ad55">8</span></td></tr>
+                <tr style="background:#fffaf5"><td><b>High</b></td><td>Failure uncertain; controls somewhat effective</td><td>≥10k ppm</td><td style="text-align:center"><span class="rank-badge" style="background:#f6ad55">7</span></td></tr>
+                <tr style="background:#fffaf5"><td></td><td>Frequent failures; controls proven somewhat effective</td><td>≥2k ppm</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">6</span></td></tr>
+                <tr style="background:#fefff5"><td><b>Moderate</b></td><td>Occasional failures; some prevention control</td><td>≥500 ppm</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">5</span></td></tr>
+                <tr style="background:#fefff5"><td></td><td>Isolated failures; control proven to reduce occurrence</td><td>≥100 ppm</td><td style="text-align:center"><span class="rank-badge" style="background:#68d391">4</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>Low</b></td><td>Rare; controls highly effective</td><td>≥10 ppm</td><td style="text-align:center"><span class="rank-badge" style="background:#68d391">3</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>Very low</b></td><td>Very rare; controls proven highly effective</td><td>≥1 ppm</td><td style="text-align:center"><span class="rank-badge" style="background:#48bb78">2</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>Ext. low</b></td><td>Failure eliminated or impossible by design</td><td>0</td><td style="text-align:center"><span class="rank-badge" style="background:#38a169">1</span></td></tr>
+              </tbody></table></div>
+            <div><div class="guide-col-head">Detection (D)</div>
+              <table class="guide-table"><thead><tr><th>Detectability</th><th>Criteria</th><th style="width:42px;text-align:center">Rank</th></tr></thead><tbody>
+                <tr style="background:#fff5f5"><td><b>Almost impossible</b></td><td>No detection method; failure will not be detected</td><td style="text-align:center"><span class="rank-badge" style="background:#e53e3e">10</span></td></tr>
+                <tr style="background:#fff8f5"><td><b>Very remote</b></td><td>Sporadic/random human inspections; cannot easily detect</td><td style="text-align:center"><span class="rank-badge" style="background:#fc8181">9</span></td></tr>
+                <tr style="background:#fff8f5"><td><b>Remote</b></td><td>Method not proven effective; microscope by highly qualified personnel</td><td style="text-align:center"><span class="rank-badge" style="background:#f6ad55">8</span></td></tr>
+                <tr style="background:#fffaf5"><td><b>Very low</b></td><td>Method proven effective; microscope by highly qualified personnel</td><td style="text-align:center"><span class="rank-badge" style="background:#f6ad55">7</span></td></tr>
+                <tr style="background:#fffaf5"><td><b>Low</b></td><td>Method proven effective; microscope by experienced operator</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">6</span></td></tr>
+                <tr style="background:#fefff5"><td><b>Moderate</b></td><td>Prevents &gt;50% defects; microscope by trained operator</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">5</span></td></tr>
+                <tr style="background:#fefff5"><td><b>Mod. high</b></td><td>Prevents &gt;75% defects; microscope by inexperienced operator</td><td style="text-align:center"><span class="rank-badge" style="background:#68d391">4</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>High</b></td><td>Prevents &gt;90% defects; machine-based in-station detection</td><td style="text-align:center"><span class="rank-badge" style="background:#68d391">3</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>Very high</b></td><td>Machine-based detection prevents defective product</td><td style="text-align:center"><span class="rank-badge" style="background:#48bb78">2</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>Almost certain</b></td><td>Detection method always instantly detects failure</td><td style="text-align:center"><span class="rank-badge" style="background:#38a169">1</span></td></tr>
+              </tbody></table></div>
+          </div>
+        </div>
+        <div class="guide-section">
+          <h2>Equipment FMEA — Ranking Guidelines</h2>
+          <div class="guide-grid">
+            <div><div class="guide-col-head">Severity (S)</div>
+              <table class="guide-table"><thead><tr><th>Effect</th><th>Criteria</th><th style="width:42px;text-align:center">Rank</th></tr></thead><tbody>
+                <tr style="background:#fff5f5"><td><b>Safety</b></td><td>Affects safety; non-compliance without warning</td><td style="text-align:center"><span class="rank-badge" style="background:#e53e3e">10</span></td></tr>
+                <tr style="background:#fff8f5"><td></td><td>Affects safety; non-compliance with advance warning</td><td style="text-align:center"><span class="rank-badge" style="background:#fc8181">9</span></td></tr>
+                <tr style="background:#fffaf5"><td><b>Serious</b></td><td>Downtime &gt;8h or defective parts for &gt;4h</td><td style="text-align:center"><span class="rank-badge" style="background:#f6ad55">8</span></td></tr>
+                <tr style="background:#fffdf5"><td></td><td>Downtime 4–8h or defective parts for 2–4h</td><td style="text-align:center"><span class="rank-badge" style="background:#f6ad55">7</span></td></tr>
+                <tr style="background:#fefff5"><td><b>Moderate</b></td><td>Downtime 1–4h or defective parts for 1–2h</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">6</span></td></tr>
+                <tr style="background:#fefff5"><td></td><td>Downtime 30min–1h or defective parts for &lt;1h</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">5</span></td></tr>
+                <tr style="background:#fefff5"><td></td><td>Downtime 10–30min; no defective parts</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">4</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>Annoyance</b></td><td>Downtime &lt;10min; no defective parts</td><td style="text-align:center"><span class="rank-badge" style="background:#68d391">3</span></td></tr>
+                <tr style="background:#f0fff4"><td></td><td>Parameter variability out of spec; adjustment during production</td><td style="text-align:center"><span class="rank-badge" style="background:#48bb78">2</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>No effect</b></td><td>Parameter variability within spec; adjustment during maintenance</td><td style="text-align:center"><span class="rank-badge" style="background:#38a169">1</span></td></tr>
+              </tbody></table></div>
+            <div><div class="guide-col-head">Occurrence (O) — MTBF</div>
+              <table class="guide-table"><thead><tr><th>Level</th><th>Criteria</th><th style="width:42px;text-align:center">Rank</th></tr></thead><tbody>
+                <tr style="background:#fff5f5"><td><b>Ext. high</b></td><td>1 failure in 10 pieces or MTBF &lt;1h</td><td style="text-align:center"><span class="rank-badge" style="background:#e53e3e">10</span></td></tr>
+                <tr style="background:#fff8f5"><td><b>Very high</b></td><td>MTBF 2–10 hours</td><td style="text-align:center"><span class="rank-badge" style="background:#fc8181">9</span></td></tr>
+                <tr style="background:#fff8f5"><td></td><td>MTBF 11–100 hours</td><td style="text-align:center"><span class="rank-badge" style="background:#f6ad55">8</span></td></tr>
+                <tr style="background:#fffaf5"><td></td><td>MTBF 101–400 hours</td><td style="text-align:center"><span class="rank-badge" style="background:#f6ad55">7</span></td></tr>
+                <tr style="background:#fffaf5"><td><b>High</b></td><td>MTBF 401–1,000 hours (16 days–6 weeks)</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">6</span></td></tr>
+                <tr style="background:#fefff5"><td></td><td>MTBF 1,001–2,000 hours (6–12 weeks)</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">5</span></td></tr>
+                <tr style="background:#fefff5"><td><b>Moderate</b></td><td>MTBF 2,001–3,000 hours (12–18 weeks)</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">4</span></td></tr>
+                <tr style="background:#f0fff4"><td></td><td>MTBF 3,001–6,000 hours (18–36 weeks)</td><td style="text-align:center"><span class="rank-badge" style="background:#68d391">3</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>Low</b></td><td>MTBF 6,001–10,000 hours (36–60 weeks)</td><td style="text-align:center"><span class="rank-badge" style="background:#48bb78">2</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>Ext. low</b></td><td>MTBF &gt;10,000 hours (60+ weeks)</td><td style="text-align:center"><span class="rank-badge" style="background:#38a169">1</span></td></tr>
+              </tbody></table></div>
+            <div><div class="guide-col-head">Contingency Measures (D)</div>
+              <table class="guide-table"><thead><tr><th>Plan</th><th>Criteria</th><th style="width:42px;text-align:center">Rank</th></tr></thead><tbody>
+                <tr style="background:#fff5f5"><td><b>No plan</b></td><td>ELT involvement needed to determine contingency</td><td style="text-align:center"><span class="rank-badge" style="background:#e53e3e">10</span></td></tr>
+                <tr style="background:#fff8f5"><td></td><td>Management approval needed or measures take &gt;96h</td><td style="text-align:center"><span class="rank-badge" style="background:#fc8181">9</span></td></tr>
+                <tr style="background:#fff8f5"><td></td><td>Engineering can mitigate within 96h</td><td style="text-align:center"><span class="rank-badge" style="background:#f6ad55">8</span></td></tr>
+                <tr style="background:#fffaf5"><td></td><td>Engineering can mitigate within 48h</td><td style="text-align:center"><span class="rank-badge" style="background:#f6ad55">7</span></td></tr>
+                <tr style="background:#fffaf5"><td><b>Not described</b></td><td>Obvious for engineering; mitigate within 24h</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">6</span></td></tr>
+                <tr style="background:#fefff5"><td></td><td>Shift can execute within 8h with remote engineering help</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">5</span></td></tr>
+                <tr style="background:#fefff5"><td></td><td>Obvious for shift; execute within 8h with remote help</td><td style="text-align:center"><span class="rank-badge" style="background:#ecc94b">4</span></td></tr>
+                <tr style="background:#f0fff4"><td><b>Described</b></td><td>Clearly described; shift within 8h with remote help</td><td style="text-align:center"><span class="rank-badge" style="background:#68d391">3</span></td></tr>
+                <tr style="background:#f0fff4"><td></td><td>Clearly described; shift can execute within 8h</td><td style="text-align:center"><span class="rank-badge" style="background:#48bb78">2</span></td></tr>
+                <tr style="background:#f0fff4"><td></td><td>Clearly described; shift can execute within 4h</td><td style="text-align:center"><span class="rank-badge" style="background:#38a169">1</span></td></tr>
+              </tbody></table></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /ws-main -->
+  </div><!-- /workspace -->
+</div><!-- /screenWork -->
+
+<!-- New Project Modal -->
+<div class="modal-overlay" id="newProjModal" onclick="if(event.target===this)closeNewProjectModal()">
+  <div class="modal" style="max-width:620px;max-height:90vh;overflow-y:auto">
+    <h3>📁 New FMEA Project</h3>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field" style="margin:0"><label>Project Name *</label><input type="text" id="newProjName" placeholder="e.g. AIXTRON G3 Reactor FMEA"></div>
+      <div class="field" style="margin:0"><label>FMEA ID</label><input type="text" id="newProjId" placeholder="e.g. FMEA-2024-001"></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <div class="field" style="margin:0"><label>Company Name</label><input type="text" id="newProjCompany" placeholder="e.g. AIXTRON SE"></div>
+      <div class="field" style="margin:0"><label>Location</label><input type="text" id="newProjLocation" placeholder="e.g. Herzogenrath, Germany"></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <div class="field" style="margin:0"><label>Customer / Product</label><input type="text" id="newProjCustomer" placeholder="e.g. Internal / G3 Reactor"></div>
+      <div class="field" style="margin:0"><label>Model Year / Program</label><input type="text" id="newProjProgram" placeholder="e.g. G3 v2 2024"></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <div class="field" style="margin:0"><label>Process Responsibility (Owner)</label><input type="text" id="newProjOwner" placeholder="e.g. Jan Kowalski"></div>
+      <div class="field" style="margin:0"><label>Confidentiality Level</label>
+        <select id="newProjConfidentiality" style="width:100%;border:1.5px solid #cbd5e0;border-radius:8px;padding:10px 12px;font-size:0.86rem;font-family:inherit;background:white">
+          <option value="Business Use">Business Use</option>
+          <option value="Proprietary">Proprietary</option>
+          <option value="Confidential">Confidential</option>
+          <option value="Public">Public</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:10px"><label>Cross-Functional Team</label><input type="text" id="newProjTeam" placeholder="e.g. J. Kowalski, A. Grzegorczyk, B. Schmidt (Process, Quality, Engineering)"></div>
+
+    <div class="field"><label>Description / Scope</label><textarea class="doc-textarea" id="newProjDesc" style="min-height:60px" placeholder="Brief description of the FMEA scope and boundaries..."></textarea></div>
+
+    <div class="field">
+      <label>FMEA Mode *</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px">
+        <label id="modeSimpleCard" class="mode-card mode-card-active" onclick="selectMode('simple')">
+          <input type="radio" name="fmeaMode" value="simple" id="modeSimple" checked style="display:none">
+          <div class="mode-card-icon">⚡</div>
+          <div class="mode-card-title">Simplified</div>
+          <div class="mode-card-desc">Core columns: failure mode, effect, cause, S/O/D, RPN, actions. Best for quick assessments and small teams.</div>
+        </label>
+        <label id="modeAdvancedCard" class="mode-card" onclick="selectMode('advanced')">
+          <input type="radio" name="fmeaMode" value="advanced" id="modeAdvanced" style="display:none">
+          <div class="mode-card-icon">🔬</div>
+          <div class="mode-card-title">Advanced</div>
+          <div class="mode-card-desc">Full AIAG/VDA columns: AP, S×O, current controls, action status, prevention vs detection actions, revised S/O/D, source, notes.</div>
+        </label>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-secondary" type="button" onclick="closeNewProjectModal()">Cancel</button>
+      <button class="btn btn-primary" type="button" onclick="createProject()">Create Project</button>
+    </div>
+  </div>
+</div>
+
+<!-- Project Settings / Header Modal -->
+<div class="modal-overlay" id="projSettingsModal" onclick="if(event.target===this)closeProjSettings()">
+  <div class="modal" style="max-width:640px;max-height:90vh;overflow-y:auto">
+    <h3>⚙ Project Header — AIAG/VDA Metadata</h3>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field" style="margin:0"><label>Project Name *</label><input type="text" id="setProjName" placeholder="e.g. AIXTRON G3 Reactor FMEA"></div>
+      <div class="field" style="margin:0"><label>FMEA ID</label><input type="text" id="setProjFmeaId" placeholder="e.g. FMEA-2024-001"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <div class="field" style="margin:0"><label>Company Name</label><input type="text" id="setProjCompany" placeholder="e.g. AIXTRON SE"></div>
+      <div class="field" style="margin:0"><label>Location</label><input type="text" id="setProjLocation" placeholder="e.g. Herzogenrath, Germany"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <div class="field" style="margin:0"><label>Customer / Product</label><input type="text" id="setProjCustomer" placeholder="e.g. Internal / G3 Reactor"></div>
+      <div class="field" style="margin:0"><label>Model Year / Program</label><input type="text" id="setProjProgram" placeholder="e.g. G3 v2 2024"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <div class="field" style="margin:0"><label>Process Responsibility (Owner)</label><input type="text" id="setProjOwner" placeholder="e.g. Jan Kowalski"></div>
+      <div class="field" style="margin:0"><label>Confidentiality Level</label>
+        <select id="setProjConfidentiality" style="width:100%;border:1.5px solid #cbd5e0;border-radius:8px;padding:10px 12px;font-size:0.86rem;font-family:inherit;background:white">
+          <option value="Business Use">Business Use</option>
+          <option value="Proprietary">Proprietary</option>
+          <option value="Confidential">Confidential</option>
+          <option value="Public">Public</option>
+        </select>
+      </div>
+    </div>
+    <div class="field" style="margin-top:10px"><label>Cross-Functional Team</label><input type="text" id="setProjTeam" placeholder="e.g. J. Kowalski, A. Grzegorczyk, B. Schmidt (Process, Quality, Engineering)"></div>
+    <div class="field"><label>Description / Scope</label><textarea class="doc-textarea" id="setProjDesc" style="min-height:60px" placeholder="Brief description of the FMEA scope and boundaries..."></textarea></div>
+
+    <div style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;font-size:0.78rem;color:#718096;margin-bottom:16px">
+      <strong style="color:#2d6a9f">Read-only:</strong>
+      <span id="setProjDates"></span>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn btn-secondary" type="button" onclick="closeProjSettings()">Cancel</button>
+      <button class="btn btn-primary" type="button" onclick="saveProjSettings()">Save Header</button>
+    </div>
+  </div>
+</div>
+
+<!-- Incident Modal -->
+<div class="modal-overlay" id="incidentModal" onclick="if(event.target===this)closeIncidentModal()">
+  <div class="inc-modal">
+    <h3 id="incModalTitle">⚠️ Log Incident</h3>
+    <input type="hidden" id="incEditId">
+    <div class="field">
+      <label>Timestamp <span class="req">*</span></label>
+      <input type="datetime-local" id="incTimestamp">
+    </div>
+    <div class="field">
+      <label>Description <span class="req">*</span></label>
+      <textarea id="incDescription" placeholder="Describe what happened, conditions, observations…"></textarea>
+    </div>
+    <div class="field">
+      <label>Attach File <span style="font-size:0.74rem;color:#a0aec0;font-weight:400">(optional)</span></label>
+      <div class="inc-upload-area" onclick="document.getElementById('incFileInput').click()">
+        📎 Click to attach a file
+        <input type="file" id="incFileInput" style="display:none" onchange="handleIncFile(this)">
+      </div>
+      <div class="inc-file-name" id="incFileName"></div>
+    </div>
+    <div class="field">
+      <label>Link to FMEA Row <span style="font-size:0.74rem;color:#a0aec0;font-weight:400">(optional — multiple incidents can link to one row)</span></label>
+      <select id="incFmeaLink" onchange="updateFmeaPreview()">
+        <option value="">— Not linked —</option>
+      </select>
+      <div class="inc-fmea-preview" id="incFmeaPreview"></div>
+    </div>
+    <div class="inc-err" id="incErr"></div>
+    <div class="modal-btns">
+      <button type="button" class="btn btn-secondary" onclick="event.stopPropagation();closeIncidentModal()">Cancel</button>
+      <button type="button" class="btn btn-primary" onclick="event.stopPropagation();saveIncident()">Save Incident</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <h4 id="confirmTitle">Confirm</h4>
+    <p id="confirmMsg"></p>
+    <div class="confirm-btns">
+      <button class="confirm-yes" id="confirmYes">Confirm</button>
+      <button class="confirm-no"  id="confirmNo">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+
+// ══════════════════════════════════════════════════════════
+//  TABS — defined first so onclick handlers can call it
+// ══════════════════════════════════════════════════════════
+window.switchTab=function(name){
+  ['upload','fmea','incidents','guide'].forEach(function(t){
+    var panel = document.getElementById('panel-'+t);
+    var tab   = document.getElementById('tab-'+t);
+    if(panel) panel.style.display=(t===name)?'block':'none';
+    if(tab)   tab.classList.toggle('active',t===name);
+  });
+  if(name==='incidents' && typeof renderIncidents==='function') renderIncidents();
+};
+
+
+// ══════════════════════════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════════════════════════
+var USERS = { admin: 'fmea2024' };
+var currentUser = null;
+var currentMode = 'simple'; // 'simple' | 'advanced'
+var hiddenCols = {}; // e.g. { cause: true, action: true }
+
+window.toggleColumn = function(key) {
+  hiddenCols[key] = !hiddenCols[key];
+  // Persist to project
+  (async function(){
+    var proj = await getProject(currentProjectId);
+    if (proj) { proj.hiddenCols = hiddenCols; await saveProject(proj); }
+  })();
+  updateColToggleButtons();
+  buildHeader();
+  renderTable();
+};
+
+function updateColToggleButtons() {
+  var causeBtn  = document.getElementById('toggleCauseBtn');
+  var actionBtn = document.getElementById('toggleActionBtn');
+  if (causeBtn) {
+    causeBtn.textContent  = hiddenCols.cause  ? 'Cause ✗' : 'Cause ✓';
+    causeBtn.classList.toggle('col-hidden', !!hiddenCols.cause);
+  }
+  if (actionBtn) {
+    actionBtn.textContent = hiddenCols.action ? 'Action ✗' : 'Action ✓';
+    actionBtn.classList.toggle('col-hidden', !!hiddenCols.action);
+  }
+}
+
+window.selectMode = function(mode) {
+  currentMode = mode;
+  document.getElementById('modeSimple').checked  = (mode === 'simple');
+  document.getElementById('modeAdvanced').checked = (mode === 'advanced');
+  document.getElementById('modeSimpleCard').classList.toggle('mode-card-active',  mode === 'simple');
+  document.getElementById('modeAdvancedCard').classList.toggle('mode-card-active', mode === 'advanced');
+};
+
+window.doLogin = function () {
+  var u = document.getElementById('loginUser').value.trim();
+  var p = document.getElementById('loginPass').value;
+  if (USERS[u] && USERS[u] === p) {
+    currentUser = u;
+    document.getElementById('loginErr').textContent = '';
+    document.getElementById('loginPass').value = '';
+    document.getElementById('dashUserLabel').textContent = '👤 ' + u;
+    document.getElementById('workUserLabel').textContent = '👤 ' + u;
+    showScreen('screenDash');
+    loadDashboard();
+  } else {
+    document.getElementById('loginErr').textContent = 'Invalid username or password.';
+  }
+};
+
+window.doLogout = function () {
+  currentUser = null;
+  currentProjectId = null;
+  rows = []; fileTexts = []; fileNames = [];
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+  showScreen('screenLogin');
+};
+
+// ══════════════════════════════════════════════════════════
+//  SCREEN MANAGEMENT
+// ══════════════════════════════════════════════════════════
+function showScreen(id) {
+  ['screenLogin','screenDash','screenWork'].forEach(function(s){
+    document.getElementById(s).classList.toggle('active', s === id);
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+//  PROJECTS
+// ══════════════════════════════════════════════════════════
+var currentProjectId = null;
+
+function projKey(id) { return 'proj:' + currentUser + ':' + id; }
+function projListKey() { return 'projlist:' + currentUser; }
+
+async function getProjectList() {
+  try {
+    var r = await window.storage.get(projListKey());
+    return r ? JSON.parse(r.value) : [];
+  } catch(e) { return []; }
+}
+async function saveProjectList(list) {
+  await window.storage.set(projListKey(), JSON.stringify(list));
+}
+async function getProject(id) {
+  try {
+    var r = await window.storage.get(projKey(id));
+    return r ? JSON.parse(r.value) : null;
+  } catch(e) { return null; }
+}
+async function saveProject(proj) {
+  proj.updatedAt = new Date().toISOString();
+  await window.storage.set(projKey(proj.id), JSON.stringify(proj));
+}
+
+async function loadDashboard() {
+  var list = await getProjectList();
+  var grid = document.getElementById('projGrid');
+  var empty = document.getElementById('emptyDash');
+  if (!list.length) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  // Load each project to get meta
+  var projects = await Promise.all(list.map(function(id){ return getProject(id); }));
+  projects = projects.filter(Boolean);
+  grid.innerHTML = projects.map(function(p) {
+    var d = new Date(p.updatedAt);
+    var dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    return '<div class="proj-card" onclick="openProject(\'' + p.id + '\')">' +
+      '<div class="proj-card-name">📋 ' + esc(p.name) + '</div>' +
+      '<div class="proj-card-desc">' + esc(p.description || '—') + '</div>' +
+      '<div class="proj-card-meta">' +
+        '<span>📊 ' + (p.rows ? p.rows.length : 0) + ' failure modes</span>' +
+        '<span>'+(p.mode==='advanced'?'🔬 Advanced':'⚡ Simplified')+'</span>' +
+        '<span>🕒 ' + dateStr + '</span>' +
+      '</div>' +
+      '<div class="proj-card-actions" onclick="event.stopPropagation()">' +
+        '<button class="btn-xs btn-xs-open" onclick="openProject(\'' + p.id + '\')">Open →</button>' +
+        '<button class="btn-xs btn-xs-del"  onclick="deleteProject(\'' + p.id + '\',\'' + esc(p.name) + '\')">Delete</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+window.openNewProjectModal = function () {
+  ['newProjName','newProjId','newProjCompany','newProjLocation','newProjCustomer',
+   'newProjProgram','newProjOwner','newProjTeam','newProjDesc'].forEach(function(id){
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('newProjConfidentiality').value = 'Business Use';
+  selectMode('simple');
+  document.getElementById('newProjModal').classList.add('open');
+  setTimeout(function(){ document.getElementById('newProjName').focus(); }, 100);
+};
+window.closeNewProjectModal = function () { document.getElementById('newProjModal').classList.remove('open'); };
+
+window.createProject = async function () {
+  var name = document.getElementById('newProjName').value.trim();
+  if (!name) { alert('Project name is required.'); return; }
+  var id = 'p' + Date.now();
+  var mode = document.querySelector('input[name="fmeaMode"]:checked').value;
+  var proj = {
+    id: id, name: name, mode: mode, rows: [],
+    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    // Header metadata
+    description:     document.getElementById('newProjDesc').value.trim(),
+    fmeaId:          document.getElementById('newProjId').value.trim(),
+    company:         document.getElementById('newProjCompany').value.trim(),
+    location:        document.getElementById('newProjLocation').value.trim(),
+    customer:        document.getElementById('newProjCustomer').value.trim(),
+    program:         document.getElementById('newProjProgram').value.trim(),
+    owner:           document.getElementById('newProjOwner').value.trim(),
+    confidentiality: document.getElementById('newProjConfidentiality').value,
+    team:            document.getElementById('newProjTeam').value.trim(),
+  };
+  await saveProject(proj);
+  var list = await getProjectList();
+  list.unshift(id);
+  await saveProjectList(list);
+  closeNewProjectModal();
+  openProject(id);
+};
+
+window.openProject = async function (id) {
+  var proj = await getProject(id);
+  if (!proj) return;
+  currentProjectId = id;
+  currentMode = proj.mode || 'simple';
+  hiddenCols = proj.hiddenCols || {};
+  rows = (proj.rows || []).map(function(r){ return Object.assign({ _rowH: 52 }, r); });
+  fileTexts = []; fileNames = [];
+  document.getElementById('bannerName').textContent = proj.name;
+  document.getElementById('bannerDesc').textContent = proj.description || '';
+  document.getElementById('bannerSave').textContent = '';
+  document.getElementById('manualText').value = '';
+  document.getElementById('fileList').innerHTML = '';
+  var badge = document.getElementById('modeBadge');
+  if (badge) badge.textContent = currentMode === 'advanced' ? '🔬 Advanced' : '⚡ Simplified';
+  showScreen('screenWork');
+  buildHeader();
+  renderTable();
+  updateColToggleButtons();
+  incidents = [];
+  loadIncidents();
+  switchTab('upload');
+};
+
+window.deleteProject = function (id, name) {
+  showConfirm('Delete Project', 'Delete "' + name + '"? This cannot be undone.', async function () {
+    var list = await getProjectList();
+    list = list.filter(function(x){ return x !== id; });
+    await saveProjectList(list);
+    try { await window.storage.delete(projKey(id)); } catch(e){}
+    loadDashboard();
+  });
+};
+
+window.goToDashboard = function () {
+  showScreen('screenDash');
+  loadDashboard();
+};
+
+// Auto-save
+var saveTimer = null;
+async function autoSave() {
+  if (!currentProjectId) return;
+  var proj = await getProject(currentProjectId);
+  if (!proj) return;
+  proj.hiddenCols = hiddenCols;
+  proj.rows = rows.map(function(r){ return { id:r.id, step:r.step, failureMode:r.failureMode, effect:r.effect, cause:r.cause, sev:r.sev, occ:r.occ, det:r.det, action:r.action, owner:r.owner, dueDate:r.dueDate, pctComplete:r.pctComplete, currPC:r.currPC, currDC:r.currDC, prevAction:r.prevAction, detAction:r.detAction, actionStatus:r.actionStatus, rsev:r.rsev, rocc:r.rocc, rdet:r.rdet, sourceFile:r.sourceFile, sourcePage:r.sourcePage, comment:r.comment, _rowH:r._rowH }; });
+  await saveProject(proj);
+  var el = document.getElementById('bannerSave');
+  el.textContent = '✓ Saved ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  setTimeout(function(){ if(el.textContent.startsWith('✓')) el.textContent = ''; }, 3000);
+}
+function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(autoSave, 800); }
+
+// ══════════════════════════════════════════════════════════
+//  CONFIRM DIALOG
+// ══════════════════════════════════════════════════════════
+var confirmCb = null;
+function showConfirm(title, msg, cb) {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMsg').textContent = msg;
+  confirmCb = cb;
+  document.getElementById('confirmOverlay').classList.add('open');
+}
+document.getElementById('confirmYes').onclick = function () {
+  document.getElementById('confirmOverlay').classList.remove('open');
+  if (confirmCb) { confirmCb(); confirmCb = null; }
+};
+document.getElementById('confirmNo').onclick = function () { document.getElementById('confirmOverlay').classList.remove('open'); confirmCb = null; };
+document.getElementById('confirmOverlay').onclick = function(e){ if(e.target===this){ this.classList.remove('open'); confirmCb=null; } };
+
+// ══════════════════════════════════════════════════════════
+//  COLUMNS
+// ══════════════════════════════════════════════════════════
+// COLS is rebuilt per mode each time buildHeader/renderTable is called
+var ALL_COLS = {
+  // ── shared core cols (always shown) ──
+  '#':           { key:'#',            label:'#',               px:48,  min:36 },
+  'step':        { key:'step',         label:'Process Step',    px:140, min:60 },
+  'failureMode': { key:'failureMode',  label:'Failure Mode',    px:160, min:60 },
+  'effect':      { key:'effect',       label:'Effect',          px:150, min:60 },
+  'cause':       { key:'cause',        label:'Cause',           px:140, min:60 },
+  'sev':         { key:'sev',          label:'S',               px:54,  min:40 },
+  'occ':         { key:'occ',          label:'O',               px:54,  min:40 },
+  'det':         { key:'det',          label:'D',               px:54,  min:40 },
+  'rpn':         { key:'rpn',          label:'RPN',             px:64,  min:44 },
+  'incCount':    { key:'incCount',     label:'Inc.',            px:52,  min:42, title:'Incidents linked' },
+  // ── advanced only ──
+  'sxo':         { key:'sxo',          label:'S×O',             px:52,  min:40, title:'Severity × Occurrence (risk exposure)', adv:true },
+  'ap':          { key:'ap',           label:'AP',              px:54,  min:44, title:'Action Priority (AIAG/VDA)', adv:true },
+  'source':      { key:'source',       label:'Source',          px:140, min:80, adv:true },
+  'currPC':      { key:'currPC',       label:'Current Prevention Control',  px:170, min:80, title:'Existing controls that prevent the failure cause from occurring', adv:true },
+  'currDC':      { key:'currDC',       label:'Current Detection Control',   px:170, min:80, title:'Existing controls that detect the failure cause or failure mode', adv:true },
+  'prevAction':  { key:'prevAction',   label:'Prevention Action',  px:160, min:60, adv:true },
+  'detAction':   { key:'detAction',    label:'Detection Action',   px:160, min:60, adv:true },
+  // ── shared action cols ──
+  'action':      { key:'action',       label:'Action',             px:160, min:60 },
+  'owner':       { key:'owner',        label:'Action Owner',       px:120, min:60 },
+  'dueDate':     { key:'dueDate',      label:'Action Due Date',    px:110, min:70 },
+  'status':      { key:'status',       label:'Status',             px:120, min:90, adv:true },
+  'pctComplete': { key:'pctComplete',  label:'% Complete',         px:90,  min:60 },
+  // ── advanced post-action ──
+  'rsev':        { key:'rsev',         label:'rS',              px:54,  min:40, title:'Revised Severity after action', adv:true },
+  'rocc':        { key:'rocc',         label:'rO',              px:54,  min:40, title:'Revised Occurrence after action', adv:true },
+  'rdet':        { key:'rdet',         label:'rD',              px:54,  min:40, title:'Revised Detection after action', adv:true },
+  'rrpn':        { key:'rrpn',         label:'rRPN',            px:64,  min:44, title:'Revised RPN after action', adv:true },
+  // ── shared trailing ──
+  'comment':     { key:'comment',      label:'Notes',              px:150, min:60 },
+  'incidents':   { key:'incidents',    label:'Incidents',          px:130, min:80 },
+  'del':         { key:'del',          label:'',                   px:38,  min:28 },
+};
+
+var SIMPLE_ORDER = ['#','step','failureMode','effect','cause','sev','occ','det','rpn','incCount','action','owner','dueDate','pctComplete','incidents','del'];
+var ADVANCED_ORDER= ['#','step','failureMode','effect','cause','currPC','sev','currDC','occ','det','rpn','sxo','ap','incCount','source','prevAction','detAction','action','owner','dueDate','status','pctComplete','rsev','rocc','rdet','rrpn','comment','incidents','del'];
+
+var GREEN_COLS_SIMPLE  = ['action','owner','dueDate','pctComplete'];
+var GREEN_COLS_ADVANCED= ['prevAction','detAction','action','owner','dueDate','status','pctComplete','rsev','rocc','rdet','rrpn','comment'];
+
+function getCols() {
+  var order = currentMode === 'advanced' ? ADVANCED_ORDER : SIMPLE_ORDER;
+  return order
+    .filter(function(k){
+      // Remove cause if hidden — but only from visible cols, not data
+      if (k === 'cause'  && hiddenCols.cause)  return false;
+      // Remove action cols if hidden
+      if (hiddenCols.action && (k === 'action' || k === 'prevAction' || k === 'detAction')) return false;
+      return true;
+    })
+    .map(function(k){ return ALL_COLS[k]; });
+}
+function getGreenCols() {
+  return currentMode === 'advanced' ? GREEN_COLS_ADVANCED : GREEN_COLS_SIMPLE;
+}
+// Keep a mutable COLS reference for resize logic
+var COLS = getCols();
+
+var rows=[], fileTexts=[], fileNames=[];
+var colResizing=null, rowResizing=null, ROW_MIN_H=36;
+var resizeLine = document.getElementById('resizeLine');
+
+function buildHeader() {
+  COLS = getCols();
+  var greenCols = getGreenCols();
+  var adv = currentMode === 'advanced';
+  var tr = document.getElementById('headerRow');
+  tr.innerHTML = '';
+  COLS.forEach(function(col,i){
+    var th = document.createElement('th');
+    th.style.width = col.px+'px';
+    th.style.position = 'sticky';
+    th.style.top = '0';
+    th.style.zIndex = '10';
+    if(greenCols.indexOf(col.key) !== -1){
+      th.style.background = '#276749';
+    }
+    if(col.adv && adv){
+      th.classList.add('adv-col');
+    }
+    var lbl=document.createElement('span'); lbl.className='th-label'; lbl.textContent=col.label; lbl.title=col.title||col.label;
+    th.appendChild(lbl);
+    if(i<COLS.length-1){
+      var h=document.createElement('div'); h.className='col-resizer';
+      h.addEventListener('mousedown',function(e){
+        e.preventDefault();
+        colResizing={idx:i,startX:e.clientX,startPx:col.px};
+        h.classList.add('resizing');
+        resizeLine.style.left=e.clientX+'px'; resizeLine.style.display='block';
+        document.body.style.cursor='col-resize'; document.body.style.userSelect='none';
+      });
+      th.appendChild(h);
+    }
+    tr.appendChild(th);
+  });
+  applyColWidths();
+}
+
+document.addEventListener('mousemove',function(e){
+  if(colResizing){
+    var col=COLS[colResizing.idx];
+    col.px=Math.max(col.min,colResizing.startPx+(e.clientX-colResizing.startX));
+    resizeLine.style.left=e.clientX+'px';
+    applyColWidths();
+    var ths=document.getElementById('headerRow').querySelectorAll('th');
+    if(ths[colResizing.idx]) ths[colResizing.idx].style.width=col.px+'px';
+  }
+  if(rowResizing){
+    var newH=Math.max(ROW_MIN_H,rowResizing.startH+(e.clientY-rowResizing.startY));
+    var r=rows.find(function(x){return x.id===rowResizing.id;});
+    if(r) r._rowH=newH;
+    var tr=document.querySelector('tr[data-id="'+rowResizing.id+'"]');
+    if(tr) tr.querySelectorAll('textarea').forEach(function(ta){ta.style.minHeight=newH+'px';ta.style.height=newH+'px';});
+  }
+});
+document.addEventListener('mouseup',function(){
+  if(colResizing){colResizing=null;resizeLine.style.display='none';document.body.style.cursor='';document.body.style.userSelect='';document.querySelectorAll('.col-resizer').forEach(function(h){h.classList.remove('resizing');});}
+  if(rowResizing){rowResizing=null;document.body.style.cursor='';document.body.style.userSelect='';}
+});
+function applyColWidths(){
+  document.getElementById('colGroup').innerHTML=COLS.map(function(c){return '<col style="width:'+c.px+'px;min-width:'+c.min+'px">';}).join('');
+}
+window.startRowResize=function(id,e){
+  e.preventDefault();e.stopPropagation();
+  var r=rows.find(function(x){return x.id===id;});
+  rowResizing={id:id,startY:e.clientY,startH:r?(r._rowH||52):52};
+  document.body.style.cursor='row-resize';document.body.style.userSelect='none';
+};
+
+// ══════════════════════════════════════════════════════════
+//  FILE UPLOAD
+// ══════════════════════════════════════════════════════════
+var dropZone=document.getElementById('dropZone');
+var fileInput=document.getElementById('fileInput');
+dropZone.addEventListener('click',function(){fileInput.click();});
+dropZone.addEventListener('dragover',function(e){e.preventDefault();dropZone.classList.add('drag');});
+dropZone.addEventListener('dragleave',function(){dropZone.classList.remove('drag');});
+dropZone.addEventListener('drop',function(e){e.preventDefault();dropZone.classList.remove('drag');handleFiles(e.dataTransfer.files);});
+fileInput.addEventListener('change',function(){handleFiles(fileInput.files);});
+function handleFiles(files){
+  Array.from(files).forEach(function(file){
+    if(file.type==='application/pdf'){
+      // PDFs can't be read as text in the browser — extract text via FileReader as binary and warn user
+      fileNames.push(file.name);
+      // Try reading as text anyway (works for text-based PDFs sometimes, fails for scanned)
+      var r=new FileReader();
+      r.onload=function(e){
+        var txt=e.target.result||'';
+        // Heuristic: if result has very little readable text, it's a binary PDF
+        var readable=txt.replace(/[^\x20-\x7E\n\r\t]/g,'').trim();
+        if(readable.length>200){
+          fileTexts.push(readable);
+          setStatus('📄 PDF text extracted. Review quality before analyzing.','');
+        } else {
+          fileTexts.push('');
+          setStatus('⚠️ Could not extract text from "'+file.name+'". Please paste the document text manually below.','error');
+        }
+        renderFileList();
+      };
+      r.readAsText(file);
+    } else {
+      var r=new FileReader();
+      r.onload=function(e){fileTexts.push(e.target.result);fileNames.push(file.name);renderFileList();};
+      r.readAsText(file);
+    }
+  });
+}
+function renderFileList(){
+  document.getElementById('fileList').innerHTML=fileNames.map(function(n,i){
+    return '<div class="file-chip">📄 '+esc(n)+'<button onclick="removeFile('+i+')">×</button></div>';
+  }).join('');
+  updateCostEstimator();
+}
+window.removeFile=function(i){fileTexts.splice(i,1);fileNames.splice(i,1);renderFileList();};
+
+// ══════════════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════════════
+function clamp(v,d){var n=parseInt(v);return isNaN(n)?(d!==undefined?d:5):Math.min(10,Math.max(1,n));}
+function pctCell(r){
+  var v=Math.min(100,Math.max(0,parseInt(r.pctComplete)||0));
+  var color=v>=100?'#38a169':v>=50?'#ecc94b':'#4299e1';
+  return '<div style="display:flex;flex-direction:column;gap:3px">'+
+    '<div style="display:flex;align-items:center;gap:4px">'+
+      '<input type="number" min="0" max="100" value="'+v+'" style="width:44px;border:1px solid transparent;border-radius:4px;padding:2px 4px;font-size:0.77rem;font-family:inherit;background:transparent;text-align:center" onchange="upd(\''+r.id+'\',\'pctComplete\',this.value)" onfocus="this.style.borderColor=\'#2d6a9f\';this.style.background=\'white\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'">'+
+      '<span style="font-size:0.72rem;color:#718096">%</span>'+
+    '</div>'+
+    '<div style="height:5px;background:#e2e8f0;border-radius:3px;overflow:hidden">'+
+      '<div style="height:100%;width:'+v+'%;background:'+color+';border-radius:3px;transition:width 0.3s"></div>'+
+    '</div>'+
+  '</div>';
+}
+function rpnVal(r){return r.sev*r.occ*r.det;}
+function rpnCls(v){return v>=200?'rpn-critical':v>=100?'rpn-high':v>=50?'rpn-med':'rpn-low';}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function setStatus(m,t){var el=document.getElementById('status');el.innerHTML=m;el.className='status '+(t||'');}
+function getContent(){return fileTexts.concat([document.getElementById('manualText').value.trim()]).filter(Boolean).join('\n\n---\n\n');}
+function parseJson(text){var c=text.replace(/```json|```/g,'').trim();try{return JSON.parse(c);}catch(e){var lb=c.lastIndexOf('},');try{return JSON.parse(lb!==-1?c.substring(0,lb+1)+']':'[]');}catch(e2){return [];}}}
+function fileOpts(sel){var o='<option value="">— none —</option>';fileNames.forEach(function(n){o+='<option value="'+esc(n)+'"'+(sel===n?' selected':'')+'>'+esc(n)+'</option>';});if(sel&&fileNames.indexOf(sel)===-1&&sel)o+='<option value="'+esc(sel)+'" selected>'+esc(sel)+'</option>';return o;}
+function newRow(d){
+  d=d||{};
+  return{
+    id:String(Date.now()+Math.random()),
+    step:d.step||'',failureMode:d.failureMode||'',effect:d.effect||'',cause:d.cause||'',
+    sev:clamp(d.sev!==undefined?d.sev:5,5),occ:clamp(d.occ!==undefined?d.occ:5,5),det:clamp(d.det!==undefined?d.det:5,5),
+    action:d.action||'',owner:d.owner||'',dueDate:d.dueDate||'',pctComplete:d.pctComplete||0,
+    // advanced fields
+    currPC:d.currPC||'',currDC:d.currDC||'',
+    prevAction:d.prevAction||'',detAction:d.detAction||'',
+    actionStatus:d.actionStatus||'open',
+    rsev:clamp(d.rsev!==undefined?d.rsev:0,0),rocc:clamp(d.rocc!==undefined?d.rocc:0,0),rdet:clamp(d.rdet!==undefined?d.rdet:0,0),
+    sourceFile:d.sourceFile||'',sourcePage:d.sourcePage||'',comment:d.comment||'',
+    _rowH:d._rowH||52
+  };
+}
+
+// ══════════════════════════════════════════════════════════
+//  RENDER TABLE
+// ══════════════════════════════════════════════════════════
+function rowIncidents(rowId){
+  return incidents.filter(function(i){return i.fmeaRowId===rowId;});
+}
+function incCountCell(rowId){
+  var cnt=rowIncidents(rowId).length;
+  if(!cnt) return '<div style="text-align:center;color:#a0aec0;font-size:0.75rem">—</div>';
+  var bg=cnt>=5?'#e53e3e':cnt>=3?'#ed8936':cnt>=1?'#ecc94b':'#e2e8f0';
+  var fg=cnt>=1?'white':'#4a5568';
+  return '<div style="text-align:center"><span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:'+bg+';color:'+fg+';font-size:0.82rem;font-weight:700;cursor:default" title="'+cnt+' incident'+(cnt!==1?'s':'')+' linked">'+cnt+'</span></div>';
+}
+function incListCell(rowId){
+  var incs=rowIncidents(rowId);
+  if(!incs.length) return '<div style="color:#a0aec0;font-size:0.74rem;text-align:center">—</div>';
+  return incs.sort(function(a,b){return (a.num||0)-(b.num||0);}).map(function(i){
+    return '<span onclick="switchTab(&quot;incidents&quot;)" title="'+esc(i.description)+'" style="display:inline-flex;align-items:center;gap:2px;background:#fff5f5;border:1px solid #fed7d7;border-radius:4px;padding:2px 6px;font-size:0.71rem;font-weight:700;color:#c53030;cursor:pointer;margin:1px 2px 1px 0;white-space:nowrap">⚠️ INC-'+(i.num||'?')+'</span>';
+  }).join('');
+}
+// ── AP (Action Priority) calculation per AIAG/VDA ──
+function calcAP(s,o,d){
+  if(s>=9){return o>=4?'H':(d>=5?'H':'H');} // S 9-10 always H
+  if(s>=7){return o>=4?'H':(d>=7?'H':'M');}  // S 7-8
+  if(s>=5){if(o>=7)return 'H'; if(o>=4)return(d>=6?'H':'M'); return(d>=8?'M':'L');}
+  if(s>=3){if(o>=7)return(d>=8?'H':'M'); if(o>=4)return(d>=8?'M':'L'); return 'L';}
+  return 'L';
+}
+function apBadge(s,o,d){
+  var ap=calcAP(s,o,d);
+  return '<span class="ap-'+ap.toLowerCase()+'">'+ap+'</span>';
+}
+function statusSel(id,val){
+  var opts=[['open','Open'],['pending','Decision Pending'],['impl','Implementation Pending'],['done','Completed'],['na','Not Implemented']];
+  return '<select class="status-sel status-'+val+'" onchange="upd(\''+id+'\',\'actionStatus\',this.value);this.className=\'status-sel status-\'+this.value">'+
+    opts.map(function(o){return '<option value="'+o[0]+'"'+(val===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+
+  '</select>';
+}
+function rRpnCell(r){
+  var rs=r.rsev||0,ro=r.rocc||0,rd=r.rdet||0;
+  if(!rs&&!ro&&!rd) return '<div style="color:#a0aec0;font-size:0.74rem;text-align:center">—</div>';
+  var rv2=rs*ro*rd;
+  return '<div class="rpn-cell '+rpnCls(rv2)+'">'+rv2+'</div>';
+}
+function numInp(id,field,val,isRevised){
+  var minVal=isRevised?0:1;
+  var placeholder=isRevised&&!val?'—':'';
+  return '<input class="num-input" type="number" min="'+minVal+'" max="10" value="'+(val||'')+'" placeholder="'+placeholder+'" onchange="upd(\''+id+'\',\''+field+'\',this.value)">';
+}
+function renderTable(){
+  COLS = getCols();
+  document.getElementById('emptyState').style.display=rows.length?'none':'block';
+  document.getElementById('rowBadge').textContent=rows.length;
+  var adv = currentMode === 'advanced';
+  document.getElementById('fmeaBody').innerHTML=rows.map(function(r,i){
+    var rv=rpnVal(r),h=r._rowH||52;
+    var ta=function(f,v){return '<textarea onchange="upd(\''+r.id+'\',\''+f+'\',this.value)" style="min-height:'+h+'px;height:'+h+'px">'+esc(v)+'</textarea>';};
+    var cells = '';
+    cells += '<td class="row-num"><div class="row-num-inner"><span>'+(i+1)+'</span><div class="row-resizer" onmousedown="startRowResize(\''+r.id+'\',event)" title="Drag to resize">⠿</div></div></td>';
+    cells += '<td class="editable">'+ta('step',r.step)+'</td>';
+    cells += '<td class="editable">'+ta('failureMode',r.failureMode)+'</td>';
+    cells += '<td class="editable">'+ta('effect',r.effect)+'</td>';
+    if(!hiddenCols.cause){ cells += '<td class="editable">'+ta('cause',r.cause)+'</td>'; }
+    if(adv){ cells += '<td class="editable" style="background:#f0fff4">'+ta('currPC',r.currPC)+'</td>'; }
+    cells += '<td class="editable"><input class="num-input" type="number" min="1" max="10" value="'+r.sev+'" onchange="upd(\''+r.id+'\',\'sev\',this.value)"></td>';
+    if(adv){ cells += '<td class="editable" style="background:#f0fff4">'+ta('currDC',r.currDC)+'</td>'; }
+    cells += '<td class="editable"><input class="num-input" type="number" min="1" max="10" value="'+r.occ+'" onchange="upd(\''+r.id+'\',\'occ\',this.value)"></td>';
+    cells += '<td class="editable"><input class="num-input" type="number" min="1" max="10" value="'+r.det+'" onchange="upd(\''+r.id+'\',\'det\',this.value)"></td>';
+    cells += '<td><div class="rpn-cell '+rpnCls(rv)+'">'+rv+'</div></td>';
+    if(adv){
+      cells += '<td class="sxo-cell" style="text-align:center;padding:4px">'+(r.sev*r.occ)+'</td>';
+      cells += '<td style="text-align:center;padding:4px">'+apBadge(r.sev,r.occ,r.det)+'</td>';
+    }
+    cells += '<td style="text-align:center;vertical-align:middle;padding:6px 4px">'+incCountCell(r.id)+'</td>';
+    if(adv){
+      cells += '<td><div class="source-wrap"><select onchange="upd(\''+r.id+'\',\'sourceFile\',this.value)">'+fileOpts(r.sourceFile)+'</select><div class="source-page">p.<input type="text" placeholder="e.g.14" value="'+esc(r.sourcePage)+'" onchange="upd(\''+r.id+'\',\'sourcePage\',this.value)"></div></div></td>';
+      if(!hiddenCols.action){ cells += '<td class="editable">'+ta('prevAction',r.prevAction)+'</td>'; }
+      if(!hiddenCols.action){ cells += '<td class="editable">'+ta('detAction',r.detAction)+'</td>'; }
+    }
+    if(!hiddenCols.action){ cells += '<td class="editable">'+ta('action',r.action)+'</td>'; }
+    cells += '<td class="editable">'+ta('owner',r.owner)+'</td>';
+    cells += '<td class="editable"><input type="date" style="width:100%;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:0.77rem;font-family:inherit;background:transparent;" value="'+esc(r.dueDate)+'" onchange="upd(\''+r.id+'\',\'dueDate\',this.value)"></td>';
+    if(adv){
+      cells += '<td>'+statusSel(r.id,r.actionStatus||'open')+'</td>';
+    }
+    cells += '<td class="editable">'+pctCell(r)+'</td>';
+    if(adv){
+      cells += '<td class="editable">'+numInp(r.id,'rsev',r.rsev,true)+'</td>';
+      cells += '<td class="editable">'+numInp(r.id,'rocc',r.rocc,true)+'</td>';
+      cells += '<td class="editable">'+numInp(r.id,'rdet',r.rdet,true)+'</td>';
+      cells += '<td>'+rRpnCell(r)+'</td>';
+      cells += '<td class="editable">'+ta('comment',r.comment)+'</td>';
+    }
+    cells += '<td style="vertical-align:top;padding:6px 4px"><div style="display:flex;flex-wrap:wrap;align-content:flex-start;gap:2px">'+incListCell(r.id)+'</div></td>';
+    cells += '<td style="vertical-align:top;padding-top:6px"><div style="display:flex;flex-direction:column;gap:3px;align-items:center">';
+    cells += '<button class="del-btn" onclick="askDel(\''+r.id+'\')">×</button>';
+    cells += '<button style="background:none;border:1px solid #fbd38d;cursor:pointer;color:#b7791f;font-size:0.65rem;padding:2px 4px;border-radius:3px;white-space:nowrap;font-weight:600" onclick="addIncidentFromRow(\''+r.id+'\')">⚠️</button>';
+    cells += '</div></td>';
+    return '<tr data-id="'+r.id+'">'+cells+'</tr>';
+  }).join('');
+  if(typeof applySearch === 'function') applySearch();
+}
+
+window.upd=function(id,field,val){
+  var r=rows.find(function(x){return x.id===id;});
+  if(!r)return;
+  r[field]=['sev','occ','det','rsev','rocc','rdet'].includes(field)?clamp(val,field.startsWith('r')?0:5):val;
+  if(['sev','occ','det','rsev','rocc','rdet'].includes(field))renderTable();
+  scheduleSave();
+};
+window.askDel=function(id){
+  showConfirm('Delete Row','Remove this failure mode from the FMEA?',function(){
+    rows=rows.filter(function(x){return x.id!==id;});
+    renderTable(); scheduleSave();
+  });
+};
+window.addRow=function(){rows.push(newRow({}));renderTable();scheduleSave();};
+window.clearAll=function(){
+  showConfirm('Clear All','Remove all failure modes from this project?',function(){
+    rows=[];renderTable();scheduleSave();setStatus('','');
+  });
+};
+
+
+
+// ══════════════════════════════════════════════════════════
+//  HELP TAB SWITCHER
+// ══════════════════════════════════════════════════════════
+window.switchHelpTab = function(name) {
+  ['overview','simple','advanced','incidents-help'].forEach(function(t) {
+    var panel = document.getElementById('help-' + t);
+    var btn   = document.getElementById('help-tab-' + t);
+    if(panel) panel.style.display = (t === name) ? 'block' : 'none';
+    if(btn)   btn.classList.toggle('help-tab-active', t === name);
+  });
+};
+
+
+
+// ══════════════════════════════════════════════════════════
+//  AI REVIEW SCREEN
+// ══════════════════════════════════════════════════════════
+var reviewItems = []; // { item, state: 'pending'|'accepted'|'rejected', edited: {...} }
+
+function openReview(items) {
+  reviewItems = items.map(function(it) {
+    return { item: it, state: 'pending', edited: JSON.parse(JSON.stringify(it)) };
+  });
+  renderReview();
+  document.getElementById('reviewOverlay').classList.add('open');
+  document.getElementById('reviewOverlay').scrollTop = 0;
+}
+
+window.closeReview = function() {
+  document.getElementById('reviewOverlay').classList.remove('open');
+};
+
+function updateReviewProgress() {
+  var total    = reviewItems.length;
+  var accepted = reviewItems.filter(function(r){ return r.state === 'accepted'; }).length;
+  var rejected = reviewItems.filter(function(r){ return r.state === 'rejected'; }).length;
+  var reviewed = accepted + rejected;
+  var pct      = total ? Math.round(reviewed / total * 100) : 0;
+
+  document.getElementById('revProgressTxt').textContent  = reviewed + ' of ' + total + ' reviewed';
+  document.getElementById('revAcceptedTxt').textContent  = accepted + ' accepted';
+  document.getElementById('revProgressFill').style.width = pct + '%';
+
+  var btnLbl = 'Add Accepted to FMEA';
+  if (accepted > 0) btnLbl = '✅ Add ' + accepted + ' to FMEA';
+  document.getElementById('reviewConfirmBtn').textContent = btnLbl;
+  document.getElementById('reviewConfirmBtn').disabled = accepted === 0;
+
+  document.getElementById('reviewFooterStats').innerHTML =
+    '<strong>'+accepted+'</strong> accepted &nbsp;·&nbsp; ' +
+    '<strong>'+rejected+'</strong> rejected &nbsp;·&nbsp; ' +
+    '<strong>'+(total-reviewed)+'</strong> pending';
+}
+
+function rpnClsRev(v){ return v>=200?'rpn-critical':v>=100?'rpn-high':v>=50?'rpn-med':'rpn-low'; }
+
+function renderReview() {
+  var body = document.getElementById('reviewBody');
+  body.innerHTML = reviewItems.map(function(ri, idx) {
+    var it  = ri.edited;
+    var rpn = (it.sev||5) * (it.occ||5) * (it.det||5);
+    var cls = ri.state === 'accepted' ? 'accepted' : ri.state === 'rejected' ? 'rejected' : '';
+    var isEditing = ri.state === 'editing';
+    if (isEditing) cls = 'editing';
+
+    var acceptActive = ri.state === 'accepted' ? 'active' : '';
+    var editActive   = isEditing               ? 'active' : '';
+    var rejectActive = ri.state === 'rejected' ? 'active' : '';
+
+    var bodyHtml;
+    if (isEditing) {
+      bodyHtml =
+        '<div class="review-card-body" style="grid-template-columns:1fr 1fr 1fr">' +
+          '<div class="review-field review-field-edit"><div class="review-field-label">Process Step</div><textarea id="re_step_'+idx+'" rows="2">'+esc(it.step||'')+'</textarea></div>' +
+          '<div class="review-field review-field-edit"><div class="review-field-label">Failure Mode</div><textarea id="re_fm_'+idx+'" rows="2">'+esc(it.failureMode||'')+'</textarea></div>' +
+          '<div class="review-field review-field-edit"><div class="review-field-label">Effect</div><textarea id="re_eff_'+idx+'" rows="2">'+esc(it.effect||'')+'</textarea></div>' +
+          '<div class="review-field review-field-edit"><div class="review-field-label">Cause</div><textarea id="re_cause_'+idx+'" rows="2">'+esc(it.cause||'')+'</textarea></div>' +
+          '<div class="review-field review-field-edit"><div class="review-field-label">Action</div><textarea id="re_act_'+idx+'" rows="2">'+esc(it.action||'')+'</textarea></div>' +
+          '<div class="review-field review-field-edit"><div class="review-field-label">S / O / D</div>' +
+            '<div class="review-scores">' +
+              'S<input class="review-score-inp" type="number" min="1" max="10" id="re_sev_'+idx+'" value="'+(it.sev||5)+'">' +
+              'O<input class="review-score-inp" type="number" min="1" max="10" id="re_occ_'+idx+'" value="'+(it.occ||5)+'">' +
+              'D<input class="review-score-inp" type="number" min="1" max="10" id="re_det_'+idx+'" value="'+(it.det||5)+'">' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="padding:8px 16px 14px;display:flex;justify-content:flex-end;gap:8px">' +
+          '<button class="rbtn" style="background:#e2e8f0;color:#4a5568" onclick="reviewCancelEdit('+idx+')">Cancel</button>' +
+          '<button class="rbtn rbtn-accept" onclick="reviewSaveEdit('+idx+')">✓ Save &amp; Accept</button>' +
+        '</div>';
+    } else {
+      bodyHtml =
+        '<div class="review-card-body">' +
+          '<div class="review-field"><div class="review-field-label">Process Step</div><div class="review-field-val">'+esc(it.step||'—')+'</div></div>' +
+          '<div class="review-field"><div class="review-field-label">Failure Mode</div><div class="review-field-val">'+esc(it.failureMode||'—')+'</div></div>' +
+          '<div class="review-field"><div class="review-field-label">Effect</div><div class="review-field-val">'+esc(it.effect||'—')+'</div></div>' +
+          '<div class="review-field"><div class="review-field-label">Cause</div><div class="review-field-val">'+esc(it.cause||'—')+'</div></div>' +
+          '<div class="review-field"><div class="review-field-label">Action</div><div class="review-field-val">'+esc(it.action||'—')+'</div></div>' +
+        '</div>';
+    }
+
+    return '<div class="review-card '+cls+'" id="rcard_'+idx+'">' +
+      '<div class="review-card-header">' +
+        '<div class="review-card-num">'+(idx+1)+'</div>' +
+        '<div class="review-card-title">'+esc(it.failureMode||'Unnamed failure mode')+'</div>' +
+        '<span class="review-card-rpn '+rpnClsRev(rpn)+'" style="border-radius:5px;padding:2px 8px;font-size:0.75rem;font-weight:700">RPN '+rpn+'</span>' +
+        '<div class="review-card-btns">' +
+          '<button class="rbtn rbtn-accept '+acceptActive+'" onclick="reviewSetState('+idx+',\'accepted\')">✓ Accept</button>' +
+          '<button class="rbtn rbtn-edit '+editActive+'"   onclick="reviewStartEdit('+idx+')">✏ Edit</button>' +
+          '<button class="rbtn rbtn-reject '+rejectActive+'" onclick="reviewSetState('+idx+',\'rejected\')">&#x2715; Reject</button>' +
+        '</div>' +
+      '</div>' +
+      bodyHtml +
+    '</div>';
+  }).join('');
+
+  updateReviewProgress();
+}
+
+window.reviewSetState = function(idx, state) {
+  if (reviewItems[idx].state === 'editing') return; // save first
+  reviewItems[idx].state = state;
+  // Re-render just this card
+  var tmp = document.createElement('div');
+  tmp.innerHTML = renderReviewCard(idx);
+  var card = document.getElementById('rcard_'+idx);
+  if (card) card.replaceWith(tmp.firstChild);
+  updateReviewProgress();
+};
+
+function renderReviewCard(idx) {
+  var ri = reviewItems[idx];
+  var it = ri.edited;
+  var rpn = (it.sev||5)*(it.occ||5)*(it.det||5);
+  var cls = ri.state === 'accepted' ? 'accepted' : ri.state === 'rejected' ? 'rejected' : '';
+  var acceptActive = ri.state==='accepted'?'active':'';
+  var rejectActive = ri.state==='rejected'?'active':'';
+  return '<div class="review-card '+cls+'" id="rcard_'+idx+'">' +
+    '<div class="review-card-header">' +
+      '<div class="review-card-num">'+(idx+1)+'</div>' +
+      '<div class="review-card-title">'+esc(it.failureMode||'Unnamed')+'</div>' +
+      '<span class="review-card-rpn '+rpnClsRev(rpn)+'" style="border-radius:5px;padding:2px 8px;font-size:0.75rem;font-weight:700">RPN '+rpn+'</span>' +
+      '<div class="review-card-btns">' +
+        '<button class="rbtn rbtn-accept '+acceptActive+'" onclick="reviewSetState('+idx+',\'accepted\')">✓ Accept</button>' +
+        '<button class="rbtn rbtn-edit" onclick="reviewStartEdit('+idx+')">✏ Edit</button>' +
+        '<button class="rbtn rbtn-reject '+rejectActive+'" onclick="reviewSetState('+idx+',\'rejected\')">&#x2715; Reject</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="review-card-body">' +
+      '<div class="review-field"><div class="review-field-label">Process Step</div><div class="review-field-val">'+esc(it.step||'—')+'</div></div>' +
+      '<div class="review-field"><div class="review-field-label">Failure Mode</div><div class="review-field-val">'+esc(it.failureMode||'—')+'</div></div>' +
+      '<div class="review-field"><div class="review-field-label">Effect</div><div class="review-field-val">'+esc(it.effect||'—')+'</div></div>' +
+      '<div class="review-field"><div class="review-field-label">Cause</div><div class="review-field-val">'+esc(it.cause||'—')+'</div></div>' +
+      '<div class="review-field"><div class="review-field-label">Action</div><div class="review-field-val">'+esc(it.action||'—')+'</div></div>' +
+    '</div>' +
+  '</div>';
+}
+
+window.reviewStartEdit = function(idx) {
+  reviewItems[idx].state = 'editing';
+  renderReview();
+  // Focus first field
+  setTimeout(function(){ var el=document.getElementById('re_step_'+idx); if(el) el.focus(); }, 50);
+};
+
+window.reviewCancelEdit = function(idx) {
+  // Restore to previous accepted/pending state
+  reviewItems[idx].state = reviewItems[idx].state === 'editing' ? 'pending' : reviewItems[idx].state;
+  reviewItems[idx].state = 'pending';
+  renderReview();
+};
+
+window.reviewSaveEdit = function(idx) {
+  var ri = reviewItems[idx];
+  ri.edited.step        = document.getElementById('re_step_'+idx).value.trim();
+  ri.edited.failureMode = document.getElementById('re_fm_'+idx).value.trim();
+  ri.edited.effect      = document.getElementById('re_eff_'+idx).value.trim();
+  ri.edited.cause       = document.getElementById('re_cause_'+idx).value.trim();
+  ri.edited.action      = document.getElementById('re_act_'+idx).value.trim();
+  ri.edited.sev         = Math.min(10,Math.max(1,parseInt(document.getElementById('re_sev_'+idx).value)||5));
+  ri.edited.occ         = Math.min(10,Math.max(1,parseInt(document.getElementById('re_occ_'+idx).value)||5));
+  ri.edited.det         = Math.min(10,Math.max(1,parseInt(document.getElementById('re_det_'+idx).value)||5));
+  ri.state = 'accepted';
+  renderReview();
+};
+
+window.reviewAcceptAll = function() {
+  reviewItems.forEach(function(ri){ if(ri.state !== 'editing') ri.state = 'accepted'; });
+  renderReview();
+};
+
+window.reviewRejectAll = function() {
+  reviewItems.forEach(function(ri){ if(ri.state !== 'editing') ri.state = 'rejected'; });
+  renderReview();
+};
+
+window.confirmReview = function() {
+  var accepted = reviewItems.filter(function(ri){ return ri.state === 'accepted'; });
+  if (!accepted.length) return;
+
+  // Ask whether to replace or append
+  var existing = rows.length;
+  if (existing > 0) {
+    showConfirm(
+      'Add to FMEA',
+      'Add ' + accepted.length + ' accepted failure modes to the existing ' + existing + ' rows?  (Cancel to replace all existing rows)',
+      function() {
+        // Append
+        accepted.forEach(function(ri){ rows.push(newRow(ri.edited)); });
+        finishReview(accepted.length, 'appended');
+      }
+    );
+    // Override the No button to do "Replace"
+    document.getElementById('confirmNo').textContent = 'Replace All';
+    document.getElementById('confirmNo').onclick = function() {
+      document.getElementById('confirmOverlay').classList.remove('open');
+      rows = accepted.map(function(ri){ return newRow(ri.edited); });
+      finishReview(accepted.length, 'replaced');
+    };
+  } else {
+    rows = accepted.map(function(ri){ return newRow(ri.edited); });
+    finishReview(accepted.length, 'added');
+  }
+};
+
+function finishReview(count, mode) {
+  closeReview();
+  buildHeader();
+  renderTable();
+  scheduleSave();
+  var usage = window._lastAnalyzeUsage || {};
+  var actualIn  = usage.input_tokens  || 0;
+  var actualOut = usage.output_tokens || 0;
+  var actualCost = ((actualIn/1e6)*3.00) + ((actualOut/1e6)*15.00);
+  function fmtC(c){ return c<0.001?'<$0.001':c<0.01?'$'+c.toFixed(4):c<0.1?'$'+c.toFixed(3):'$'+c.toFixed(2); }
+  var costStr = actualIn ? ' · Tokens: '+actualIn.toLocaleString()+' in / '+actualOut.toLocaleString()+' out · Cost: '+fmtC(actualCost) : '';
+  setStatus('✅ '+count+' failure modes '+mode+' to FMEA.'+costStr, '');
+  switchTab('fmea');
+}
+
+// ══════════════════════════════════════════════════════════
+//  COST ESTIMATOR
+// ══════════════════════════════════════════════════════════
+// Pricing: claude-sonnet-4-20250514 = $3/M input, $15/M output
+var COST_INPUT_PER_M  = 3.00;   // USD per million input tokens
+var COST_OUTPUT_PER_M = 15.00;  // USD per million output tokens
+
+// Prompt overhead (system instructions, JSON schema, rules) — measured from actual prompt
+var PROMPT_OVERHEAD_CHARS = 680; // chars of fixed prompt text before document content
+var DOC_CAP_CHARS = 150000;      // document content capped at 150000 chars in analyze()
+
+// Output estimate: ~20 failure modes × ~120 tokens each
+var EST_OUTPUT_TOKENS = 20 * 120; // 2400 tokens
+
+function charsToTokens(chars) {
+  // Typical ratio: ~4 chars per token for English technical text
+  return Math.ceil(chars / 4);
+}
+
+function updateCostEstimator() {
+  var bar = document.getElementById('costBar');
+  if (!bar) return;
+
+  var content = getContent();
+  if (!content) {
+    bar.innerHTML = '<span class="cost-bar-empty">Add a document above to see estimated token usage and cost.</span>';
+    return;
+  }
+
+  // Total prompt chars = overhead + document (capped)
+  var docChars      = Math.min(content.length, DOC_CAP_CHARS);
+  var totalChars    = PROMPT_OVERHEAD_CHARS + docChars;
+  var inputTokens   = charsToTokens(totalChars);
+  var outputTokens  = EST_OUTPUT_TOKENS;
+  var totalTokens   = inputTokens + outputTokens;
+
+  var inputCost  = (inputTokens  / 1e6) * COST_INPUT_PER_M;
+  var outputCost = (outputTokens / 1e6) * COST_OUTPUT_PER_M;
+  var totalCost  = inputCost + outputCost;
+
+  // Document coverage meter (how much of the doc fits in the cap)
+  var coverage    = Math.min(100, Math.round((docChars / content.length) * 100));
+  var fillColor   = coverage >= 100 ? '#48bb78' : coverage >= 60 ? '#ecc94b' : '#fc8181';
+  var truncated   = content.length > DOC_CAP_CHARS;
+
+  // Format cost — show more decimals for tiny amounts
+  function fmtCost(c) {
+    if (c < 0.001) return '<$0.001';
+    if (c < 0.01)  return '$' + c.toFixed(4);
+    if (c < 0.1)   return '$' + c.toFixed(3);
+    return '$' + c.toFixed(2);
+  }
+  function fmtTokens(t) {
+    return t >= 1000 ? (t/1000).toFixed(1) + 'k' : String(t);
+  }
+
+  bar.innerHTML =
+    '<div class="cost-stat">' +
+      '<div class="cost-stat-val">'+fmtTokens(inputTokens)+'</div>' +
+      '<div class="cost-stat-lbl">Input tokens</div>' +
+    '</div>' +
+    '<div class="cost-divider"></div>' +
+    '<div class="cost-stat">' +
+      '<div class="cost-stat-val">'+fmtTokens(outputTokens)+'</div>' +
+      '<div class="cost-stat-lbl">Est. output tokens</div>' +
+    '</div>' +
+    '<div class="cost-divider"></div>' +
+    '<div class="cost-stat">' +
+      '<div class="cost-stat-val" style="color:#2d6a9f">'+fmtTokens(totalTokens)+'</div>' +
+      '<div class="cost-stat-lbl">Total tokens</div>' +
+    '</div>' +
+    '<div class="cost-divider"></div>' +
+    '<div class="cost-stat">' +
+      '<div class="cost-stat-val" style="color:#276749;font-size:1.2rem">'+fmtCost(totalCost)+'</div>' +
+      '<div class="cost-stat-lbl">Est. cost (USD)</div>' +
+    '</div>' +
+    '<div class="cost-meter">' +
+      '<div class="cost-meter-label">' +
+        '<span>Document coverage</span>' +
+        '<span style="font-weight:700;color:'+fillColor+'">'+coverage+'%</span>' +
+      '</div>' +
+      '<div class="cost-meter-bar">' +
+        '<div class="cost-meter-fill" style="width:'+coverage+'%;background:'+fillColor+'"></div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="cost-tip">' +
+      '<strong>Rate:</strong> $3.00 / M input · $15.00 / M output (claude-sonnet-4-20250514)' +
+      (truncated
+        ? ' &nbsp;|&nbsp; <span style="color:#e53e3e">⚠ Document exceeds 150,000 characters (~50 pages). Only the first 150,000 characters will be analyzed.</span>'
+        : ' &nbsp;|&nbsp; <span style="color:#276749">✓ Full document fits within limit.</span>') +
+    '</div>';
+}
+
+window.updateCostEstimator = updateCostEstimator;
+
+// ══════════════════════════════════════════════════════════
+//  INCIDENTS
+// ══════════════════════════════════════════════════════════
+var incidents = []; // { id, timestamp, description, fmeaRowId, fileName, fileData }
+
+function incKey() { return 'incidents:' + currentUser + ':' + currentProjectId; }
+
+async function loadIncidents() {
+  try {
+    var r = await window.storage.get(incKey());
+    incidents = r ? JSON.parse(r.value) : [];
+    // Back-fill num for older incidents that lack it
+    var maxNum = 0;
+    incidents.forEach(function(i){ if(i.num && i.num > maxNum) maxNum = i.num; });
+    incidents.forEach(function(i){ if(!i.num){ maxNum++; i.num = maxNum; } });
+  } catch(e) { incidents = []; }
+  renderIncidents();
+}
+
+async function saveIncidents() {
+  if (!currentProjectId) return;
+  try {
+    var toStore = incidents.map(function(i){ return Object.assign({}, i, {fileData: ''}); });
+    await window.storage.set(incKey(), JSON.stringify(toStore));
+    var el = document.getElementById('bannerSave');
+    if (el) {
+      el.textContent = '✓ Saved ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      setTimeout(function(){ if(el && el.textContent.startsWith('✓')) el.textContent = ''; }, 3000);
+    }
+  } catch(e) { console.warn('saveIncidents error:', e); }
+}
+
+function renderIncidents() {
+  var list = document.getElementById('incList');
+  if (!list) return;
+  var badge = document.getElementById('incBadge');
+  var countLabel = document.getElementById('incCountLabel');
+
+  if (badge) badge.textContent = incidents.length;
+  if (countLabel) countLabel.textContent = incidents.length + ' incident' + (incidents.length !== 1 ? 's' : '');
+
+  // Clear all cards, keep the empty-state div
+  Array.from(list.querySelectorAll('.inc-card')).forEach(function(el){ el.remove(); });
+  var empty = document.getElementById('incEmpty');
+
+  if (!incidents.length) {
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  // Sort newest first
+  var sorted = incidents.slice().sort(function(a,b){ return new Date(b.timestamp) - new Date(a.timestamp); });
+
+  sorted.forEach(function(inc) {
+    var linkedRow = inc.fmeaRowId ? rows.find(function(r){ return r.id === inc.fmeaRowId; }) : null;
+    var linkHtml = linkedRow
+      ? '<span class="inc-link-badge">🔗 #' + (rows.indexOf(linkedRow)+1) + ' — ' + esc(linkedRow.failureMode || linkedRow.step || 'Row') + '</span>'
+      : '<span class="inc-link-none">Not linked</span>';
+
+    var card = document.createElement('div');
+    card.className = 'inc-card';
+    card.dataset.id = inc.id;
+    card.innerHTML =
+      '<div><div class="inc-field-label">Incident #</div><div class="inc-ts" style="font-size:1rem;color:#e53e3e">#' + (inc.num||'—') + '</div><div style="font-size:0.75rem;color:#718096;margin-top:2px">' + esc(formatTs(inc.timestamp)) + '</div></div>' +
+      '<div><div class="inc-field-label">Description</div><div class="inc-desc">' + esc(inc.description) + '</div>' +
+        (inc.fileName ? '<div style="margin-top:5px;font-size:0.74rem;color:#2b6cb0">📎 ' + esc(inc.fileName) + '</div>' : '') +
+      '</div>' +
+      '<div><div class="inc-field-label">Linked FMEA Row</div>' + linkHtml + '</div>' +
+      '<div><div class="inc-field-label">Actions</div><div class="inc-actions">' +
+        '<button class="inc-edit-btn" onclick="editIncident(\'' + inc.id + '\')">✏️ Edit</button>' +
+        '<button class="inc-del-btn" onclick="deleteIncident(\'' + inc.id + '\')">✕ Delete</button>' +
+      '</div></div>';
+    list.appendChild(card);
+  });
+}
+
+function formatTs(ts) {
+  if (!ts) return '—';
+  var d = new Date(ts);
+  if (isNaN(d)) return ts;
+  return d.toLocaleString([], {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+
+// Modal open/close
+window.openIncidentModal = function(prefillFmeaId) {
+  document.getElementById('incModalTitle').textContent = '⚠️ Log Incident';
+  document.getElementById('incEditId').value = '';
+  // Default timestamp to now
+  var now = new Date();
+  now.setSeconds(0,0);
+  document.getElementById('incTimestamp').value = now.toISOString().slice(0,16);
+  document.getElementById('incDescription').value = '';
+  document.getElementById('incFileName').textContent = '';
+  document.getElementById('incFileInput').value = '';
+  document.getElementById('incErr').textContent = '';
+  populateFmeaLinkSelect(prefillFmeaId || '');
+  document.getElementById('incidentModal').classList.add('open');
+  setTimeout(function(){ document.getElementById('incDescription').focus(); }, 100);
+};
+
+window.closeIncidentModal = function() {
+  document.getElementById('incidentModal').classList.remove('open');
+};
+// incidentModal overlay click-to-close handled via onclick attribute on the element
+
+window.editIncident = function(id) {
+  var inc = incidents.find(function(i){ return i.id === id; });
+  if (!inc) return;
+  document.getElementById('incModalTitle').textContent = '✏️ Edit Incident';
+  document.getElementById('incEditId').value = id;
+  document.getElementById('incTimestamp').value = inc.timestamp ? inc.timestamp.slice(0,16) : '';
+  document.getElementById('incDescription').value = inc.description || '';
+  document.getElementById('incFileName').textContent = inc.fileName ? '📎 ' + inc.fileName : '';
+  document.getElementById('incErr').textContent = '';
+  populateFmeaLinkSelect(inc.fmeaRowId || '');
+  document.getElementById('incidentModal').classList.add('open');
+};
+
+function populateFmeaLinkSelect(selectedId) {
+  var sel = document.getElementById('incFmeaLink');
+  sel.innerHTML = '<option value="">— Not linked —</option>';
+  rows.forEach(function(r, idx) {
+    var linkedCount = incidents.filter(function(i){ return i.fmeaRowId === r.id; }).length;
+    var label = '#' + (idx+1) + ' — ' + (r.failureMode || r.step || 'Row ' + (idx+1));
+    var opt = document.createElement('option');
+    opt.value = r.id;
+    opt.textContent = label + (linkedCount ? ' (' + linkedCount + ' incident' + (linkedCount>1?'s':'') + ')' : '');
+    if (r.id === selectedId) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  updateFmeaPreview();
+}
+
+window.updateFmeaPreview = function() {
+  var sel = document.getElementById('incFmeaLink');
+  var preview = document.getElementById('incFmeaPreview');
+  var rowId = sel.value;
+  if (!rowId) { preview.textContent = ''; return; }
+  var r = rows.find(function(x){ return x.id === rowId; });
+  if (!r) { preview.textContent = ''; return; }
+  var rpn = r.sev * r.occ * r.det;
+  preview.textContent = 'Step: ' + (r.step||'—') + ' | Effect: ' + (r.effect||'—') + ' | RPN: ' + rpn;
+};
+
+var incFileDataTemp = '';
+window.handleIncFile = function(input) {
+  var file = input.files[0];
+  if (!file) return;
+  document.getElementById('incFileName').textContent = '📎 ' + file.name;
+  var reader = new FileReader();
+  reader.onload = function(e) { incFileDataTemp = e.target.result; };
+  reader.readAsDataURL(file);
+};
+
+window.saveIncident = function() {
+  try {
+  var editId = document.getElementById('incEditId').value;
+  var ts = document.getElementById('incTimestamp').value;
+  var desc = document.getElementById('incDescription').value.trim();
+  var fmeaRowId = document.getElementById('incFmeaLink').value;
+  var errEl = document.getElementById('incErr');
+
+  if (!ts) { errEl.textContent = 'Timestamp is required.'; return; }
+  if (!desc) { errEl.textContent = 'Description is required.'; return; }
+
+  var fileNameVal = document.getElementById('incFileName').textContent.replace('📎 ','').trim();
+
+  if (editId) {
+    var inc = incidents.find(function(i){ return i.id === editId; });
+    if (inc) {
+      inc.timestamp = ts;
+      inc.description = desc;
+      inc.fmeaRowId = fmeaRowId || '';
+      if (fileNameVal) { inc.fileName = fileNameVal; inc.fileData = incFileDataTemp || inc.fileData; }
+    }
+  } else {
+    var nextNum = incidents.reduce(function(m,i){ return Math.max(m, i.num||0); }, 0) + 1;
+    incidents.push({
+      id: 'inc' + Date.now(),
+      num: nextNum,
+      timestamp: ts,
+      description: desc,
+      fmeaRowId: fmeaRowId || '',
+      fileName: fileNameVal || '',
+      fileData: incFileDataTemp || ''
+    });
+  }
+
+  incFileDataTemp = '';
+  document.getElementById('incFileInput').value = '';
+  closeIncidentModal();
+  renderIncidents();
+  renderTable();
+  saveIncidents();
+  } catch(e) { console.error('saveIncident error:', e); }
+};
+
+window.deleteIncident = function(id) {
+  showConfirm('Delete Incident', 'Remove this incident from the log?', function() {
+    incidents = incidents.filter(function(i){ return i.id !== id; });
+    renderIncidents();
+    renderTable();
+    saveIncidents();
+  });
+};
+
+// Add incident from FMEA row context
+window.addIncidentFromRow = function(rowId) {
+  switchTab('incidents');
+  setTimeout(function(){ openIncidentModal(rowId); }, 100);
+};
+
+// Export incidents to CSV
+window.exportIncidentsCSV = function() {
+  var h = ['Timestamp','Description','Linked FMEA Row','Failure Mode','Effect','RPN','File Attached'];
+  var b = incidents.map(function(inc) {
+    var r = inc.fmeaRowId ? rows.find(function(x){ return x.id === inc.fmeaRowId; }) : null;
+    return [
+      '"' + formatTs(inc.timestamp) + '"',
+      '"' + (inc.description||'').replace(/"/g,'""') + '"',
+      r ? '"#' + (rows.indexOf(r)+1) + '"' : '""',
+      r ? '"' + (r.failureMode||'').replace(/"/g,'""') + '"' : '""',
+      r ? '"' + (r.effect||'').replace(/"/g,'""') + '"' : '""',
+      r ? (r.sev*r.occ*r.det) : '',
+      inc.fileName ? '"' + inc.fileName + '"' : '""'
+    ].join(',');
+  });
+  dl([h.join(',')].concat(b).join('\n'), 'Incidents.csv', 'text/csv');
+};
+
+window.triggerIncidentImport = function() {
+  document.getElementById('incImportInput').value = '';
+  document.getElementById('incImportInput').click();
+};
+
+window.importIncidents = function(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var text = e.target.result;
+    var parsed = [];
+
+    try {
+      // ── Try JSON first ──
+      if (file.name.toLowerCase().endsWith('.json')) {
+        var raw = JSON.parse(text);
+        // Support array or { incidents: [...] } wrapper
+        var arr = Array.isArray(raw) ? raw : (raw.incidents || raw.rows || []);
+        arr.forEach(function(item) {
+          // Must have a timestamp
+          var ts = item.timestamp || item.Timestamp || item.time || item.date || '';
+          if (!ts || !isValidTs(ts)) return;
+          parsed.push({
+            id:          'inc' + Date.now() + Math.random(),
+            num:         0, // assigned below
+            timestamp:   normaliseTs(ts),
+            description: item.description || item.Description || item.desc || '',
+            fmeaRowId:   '',   // links cannot be restored cross-project
+            fileName:    item.fileName || item.file || '',
+            fileData:    ''
+          });
+        });
+      } else {
+        // ── Try CSV ──
+        var lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(function(l){ return l.trim(); });
+        if (!lines.length) { showImportResult(0, 0, 'File appears empty.'); return; }
+        // Detect header row
+        var startRow = 0;
+        var headers = lines[0].split(',').map(function(h){ return h.replace(/^"|"$/g,'').trim().toLowerCase(); });
+        var tsIdx   = findColIdx(headers, ['timestamp','time','date','datetime']);
+        var descIdx = findColIdx(headers, ['description','desc','detail','notes','text','comment']);
+        var fileIdx = findColIdx(headers, ['file attached','file','filename','attachment']);
+        if (tsIdx !== -1) { startRow = 1; } // has header
+        else { tsIdx = 0; descIdx = 1; } // assume col 0 = timestamp, col 1 = desc
+
+        for (var i = startRow; i < lines.length; i++) {
+          var cols = parseCsvLine(lines[i]);
+          var ts   = (cols[tsIdx] || '').replace(/^"|"$/g,'').trim();
+          if (!ts || !isValidTs(ts)) continue; // skip rows without valid timestamp
+          var desc = descIdx !== -1 ? (cols[descIdx] || '').replace(/^"|"$/g,'').trim() : '';
+          var fname = fileIdx !== -1 ? (cols[fileIdx] || '').replace(/^"|"$/g,'').trim() : '';
+          parsed.push({
+            id:          'inc' + Date.now() + Math.random(),
+            num:         0,
+            timestamp:   normaliseTs(ts),
+            description: desc,
+            fmeaRowId:   '',
+            fileName:    fname && fname !== '""' ? fname : '',
+            fileData:    ''
+          });
+        }
+      }
+    } catch(err) {
+      showImportResult(0, 0, 'Could not parse file: ' + err.message);
+      return;
+    }
+
+    var skipped = (file.name.toLowerCase().endsWith('.json')
+      ? (JSON.parse(text).length || 0)
+      : text.replace(/\r/g,'\n').split('\n').filter(Boolean).length - 1) - parsed.length;
+
+    if (!parsed.length) {
+      showImportResult(0, skipped, 'No valid incidents found. Every incident must have a timestamp.');
+      return;
+    }
+
+    showConfirm(
+      'Import Incidents',
+      'Import ' + parsed.length + ' incident' + (parsed.length !== 1 ? 's' : '') +
+      (skipped > 0 ? ' (' + skipped + ' skipped — no valid timestamp)' : '') +
+      '? They will be added to existing incidents.',
+      function() {
+        // Assign sequential numbers continuing from current max
+        var maxNum = incidents.reduce(function(m, i){ return Math.max(m, i.num || 0); }, 0);
+        parsed.forEach(function(inc) { maxNum++; inc.num = maxNum; });
+        incidents = incidents.concat(parsed);
+        renderIncidents();
+        renderTable();
+        saveIncidents();
+        showImportResult(parsed.length, skipped, '');
+      }
+    );
+  };
+  reader.readAsText(file);
+};
+
+function isValidTs(ts) {
+  if (!ts || typeof ts !== 'string') return false;
+  var d = new Date(ts);
+  return !isNaN(d.getTime());
+}
+function normaliseTs(ts) {
+  // Convert to ISO-compatible datetime-local format (YYYY-MM-DDTHH:MM)
+  var d = new Date(ts);
+  if (isNaN(d)) return ts;
+  var pad = function(n){ return String(n).padStart(2,'0'); };
+  return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) +
+         'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+function findColIdx(headers, candidates) {
+  for (var c = 0; c < candidates.length; c++) {
+    var idx = headers.indexOf(candidates[c]);
+    if (idx !== -1) return idx;
+  }
+  return -1;
+}
+function parseCsvLine(line) {
+  // Simple CSV parser handling quoted fields
+  var cols = [], cur = '', inQ = false;
+  for (var i = 0; i < line.length; i++) {
+    var ch = line[i];
+    if (ch === '"') { inQ = !inQ; }
+    else if (ch === ',' && !inQ) { cols.push(cur); cur = ''; }
+    else { cur += ch; }
+  }
+  cols.push(cur);
+  return cols;
+}
+function showImportResult(imported, skipped, errMsg) {
+  var msg = errMsg ||
+    '✅ Imported ' + imported + ' incident' + (imported !== 1 ? 's' : '') +
+    (skipped > 0 ? '. ' + skipped + ' row' + (skipped !== 1 ? 's' : '') + ' skipped (no valid timestamp).' : '.');
+  var type = errMsg ? 'error' : '';
+  // Show briefly in inc toolbar
+  var label = document.getElementById('incCountLabel');
+  if (label) {
+    var prev = label.textContent;
+    label.textContent = msg;
+    label.style.color = errMsg ? '#fc8181' : '#68d391';
+    setTimeout(function(){
+      label.style.color = '';
+      // restore will happen on next renderIncidents call
+    }, 4000);
+  }
+}
+
+
+// ══════════════════════════════════════════════════════════
+//  REPORT GENERATION
+// ══════════════════════════════════════════════════════════
+
+window.closeReport = function() {
+  document.getElementById('reportOverlay').style.display = 'none';
+};
+
+function rptEsc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function rptRpnCls(v) {
+  return v>=200?'rpt-rpn-crit':v>=100?'rpt-rpn-high':v>=50?'rpt-rpn-med':'rpt-rpn-low';
+}
+function rptApBadge(s,o,d) {
+  var ap = calcAP(s,o,d);
+  return '<span class="rpt-ap-'+ap.toLowerCase()+'">'+ap+'</span>';
+}
+function rptFormatDate(iso) {
+  if (!iso) return '—';
+  var d = new Date(iso);
+  return isNaN(d) ? iso : d.toLocaleDateString();
+}
+function rptFormatDateTime(iso) {
+  if (!iso) return '—';
+  var d = new Date(iso);
+  if (isNaN(d)) return iso;
+  var opts = {year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'};
+  return d.toLocaleString([], opts);
+}
+function rptFormatTs(ts) {
+  if (!ts) return '—';
+  var d = new Date(ts);
+  return isNaN(d) ? ts : d.toLocaleString([],{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+
+// ── Build FMEA table rows for a project ──
+function buildFmeaTableHtml(projRows, projIncidents, mode) {
+  var adv = mode === 'advanced';
+  var hdrs = ['#','Process Step','Failure Mode','Effect','Cause'];
+  if (adv) hdrs.push('Current Prevention Control');
+  hdrs.push('S');
+  if (adv) hdrs.push('Current Detection Control');
+  hdrs.push('O','D','RPN');
+  if (adv) hdrs.push('AP');
+  hdrs.push('Inc.','Action','Owner','Due Date','% Done');
+  if (adv) hdrs.push('Status','rS','rO','rD','rRPN');
+
+  var thead = '<tr>' + hdrs.map(function(h){ return '<th>'+h+'</th>'; }).join('') + '</tr>';
+
+  var tbody = projRows.map(function(r, idx) {
+    var rv = r.sev*r.occ*r.det;
+    var incCount = projIncidents.filter(function(i){ return i.fmeaRowId === r.id; }).length;
+    var incNums  = projIncidents.filter(function(i){ return i.fmeaRowId === r.id; })
+                    .sort(function(a,b){return(a.num||0)-(b.num||0);})
+                    .map(function(i){ return 'INC-'+(i.num||'?'); }).join(', ');
+    var rRpn = (r.rsev&&r.rocc&&r.rdet) ? r.rsev*r.rocc*r.rdet : 0;
+
+    var cells = [
+      idx+1,
+      rptEsc(r.step),
+      rptEsc(r.failureMode),
+      rptEsc(r.effect),
+      rptEsc(r.cause),
+    ];
+    if (adv) cells.push(rptEsc(r.currPC||''));
+    cells.push(r.sev);
+    if (adv) cells.push(rptEsc(r.currDC||''));
+    cells.push(r.occ, r.det, '<span class="td-rpn '+rptRpnCls(rv)+'">'+rv+'</span>');
+    if (adv) cells.push(rptApBadge(r.sev,r.occ,r.det));
+    cells.push(
+      incCount ? '<span style="font-weight:700;color:#c05621">'+incCount+(incNums?' ('+incNums+')':'')+'</span>' : '—',
+      rptEsc(r.action||r.prevAction||''),
+      rptEsc(r.owner||''),
+      rptFormatDate(r.dueDate),
+      (r.pctComplete||0)+'%'
+    );
+    if (adv) {
+      var statusLabels = {open:'Open',pending:'Decision Pending',impl:'Impl. Pending',done:'Completed',na:'Not Impl.'};
+      cells.push(
+        statusLabels[r.actionStatus]||r.actionStatus||'Open',
+        r.rsev||'—', r.rocc||'—', r.rdet||'—',
+        rRpn ? '<span class="td-rpn '+rptRpnCls(rRpn)+'">'+rRpn+'</span>' : '—'
+      );
+    }
+    return '<tr>'+cells.map(function(c){ return '<td>'+c+'</td>'; }).join('')+'</tr>';
+  }).join('');
+
+  return '<table class="rpt-table"><thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table>';
+}
+
+// ── Build incident table for a project ──
+function buildIncTableHtml(projIncidents, projRows) {
+  if (!projIncidents.length) return '<p style="color:#a0aec0;font-size:0.82rem">No incidents recorded.</p>';
+  var sorted = projIncidents.slice().sort(function(a,b){ return new Date(a.timestamp)-new Date(b.timestamp); });
+  var rows = sorted.map(function(inc) {
+    var linked = inc.fmeaRowId ? projRows.find(function(r){ return r.id===inc.fmeaRowId; }) : null;
+    return '<tr>'+
+      '<td><strong>INC-'+(inc.num||'?')+'</strong></td>'+
+      '<td>'+rptFormatTs(inc.timestamp)+'</td>'+
+      '<td>'+rptEsc(inc.description)+'</td>'+
+      '<td>'+(linked ? '#'+(projRows.indexOf(linked)+1)+' '+rptEsc(linked.failureMode||linked.step||'') : '—')+'</td>'+
+      '<td>'+(inc.fileName?rptEsc(inc.fileName):'—')+'</td>'+
+    '</tr>';
+  }).join('');
+  return '<table class="rpt-inc-table"><thead><tr><th>INC #</th><th>Timestamp</th><th>Description</th><th>Linked FMEA Row</th><th>File</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+
+// ── KPI summary block ──
+
+// ── RPN Donut Chart (pure SVG, no dependencies) ──
+function buildRpnDonutChart(projRows, chartId) {
+  var low    = projRows.filter(function(r){ var v=r.sev*r.occ*r.det; return v<50; }).length;
+  var med    = projRows.filter(function(r){ var v=r.sev*r.occ*r.det; return v>=50&&v<100; }).length;
+  var high   = projRows.filter(function(r){ var v=r.sev*r.occ*r.det; return v>=100&&v<200; }).length;
+  var crit   = projRows.filter(function(r){ var v=r.sev*r.occ*r.det; return v>=200; }).length;
+  var total  = projRows.length;
+
+  if (!total) return '<div style="color:#a0aec0;font-size:0.82rem;padding:20px;text-align:center">No failure modes to chart.</div>';
+
+  var segments = [
+    { label:'Critical ≥200', count:crit, color:'#e53e3e' },
+    { label:'High 100–199',  count:high, color:'#ed8936' },
+    { label:'Medium 50–99',  count:med,  color:'#ecc94b' },
+    { label:'Low <50',       count:low,  color:'#48bb78' }
+  ];
+
+  // Build SVG donut
+  var cx=90, cy=90, r=70, inner=42;
+  var svgParts = [];
+  var startAngle = -Math.PI/2; // start at top
+  var hasArc = false;
+
+  segments.forEach(function(seg) {
+    if (!seg.count) return;
+    hasArc = true;
+    var angle = (seg.count / total) * 2 * Math.PI;
+    var endAngle = startAngle + angle;
+    var x1=cx+r*Math.cos(startAngle), y1=cy+r*Math.sin(startAngle);
+    var x2=cx+r*Math.cos(endAngle),   y2=cy+r*Math.sin(endAngle);
+    var ix1=cx+inner*Math.cos(startAngle), iy1=cy+inner*Math.sin(startAngle);
+    var ix2=cx+inner*Math.cos(endAngle),   iy2=cy+inner*Math.sin(endAngle);
+    var largeArc = angle > Math.PI ? 1 : 0;
+    // If only one segment (all same), draw full circle
+    if (total === seg.count) {
+      svgParts.push(
+        '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+seg.color+'"/>'+
+        '<circle cx="'+cx+'" cy="'+cy+'" r="'+inner+'" fill="white"/>'
+      );
+    } else {
+      svgParts.push(
+        '<path d="M '+x1+' '+y1+' A '+r+' '+r+' 0 '+largeArc+' 1 '+x2+' '+y2+
+        ' L '+ix2+' '+iy2+' A '+inner+' '+inner+' 0 '+largeArc+' 0 '+ix1+' '+iy1+' Z"'+
+        ' fill="'+seg.color+'" stroke="white" stroke-width="2"/>'
+      );
+    }
+    startAngle = endAngle;
+  });
+
+  // Centre label
+  svgParts.push(
+    '<text x="'+cx+'" y="'+(cy-6)+'" text-anchor="middle" font-size="18" font-weight="700" fill="#1e3a5f">'+total+'</text>'+
+    '<text x="'+cx+'" y="'+(cy+12)+'" text-anchor="middle" font-size="9" fill="#718096">total</text>'
+  );
+
+  var svg = '<svg width="180" height="180" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">'+svgParts.join('')+'</svg>';
+
+  // Legend
+  var legend = segments.map(function(seg) {
+    var pct = total ? Math.round(seg.count/total*100) : 0;
+    return '<div style="display:flex;align-items:center;gap:7px;margin-bottom:7px">'+
+      '<div style="width:13px;height:13px;border-radius:3px;background:'+seg.color+';flex-shrink:0"></div>'+
+      '<div style="font-size:0.78rem;color:#2d3748">'+
+        '<span style="font-weight:700">'+seg.count+'</span>'+
+        '<span style="color:#718096"> ('+pct+'%) </span>'+
+        seg.label+
+      '</div>'+
+    '</div>';
+  }).join('');
+
+  return '<div style="display:flex;align-items:center;gap:28px;flex-wrap:wrap">'+
+    '<div style="flex-shrink:0">'+svg+'</div>'+
+    '<div>'+
+      '<div style="font-size:0.8rem;font-weight:700;color:#1e3a5f;margin-bottom:10px">RPN Distribution</div>'+
+      legend+
+    '</div>'+
+  '</div>';
+}
+
+function buildKpiHtml(projRows, projIncidents) {
+  var total    = projRows.length;
+  var critical = projRows.filter(function(r){ return r.sev*r.occ*r.det>=200; }).length;
+  var highRpn  = projRows.filter(function(r){ var v=r.sev*r.occ*r.det; return v>=100&&v<200; }).length;
+  var openAct  = projRows.filter(function(r){ return r.action&&(r.pctComplete||0)<100; }).length;
+  var done     = projRows.filter(function(r){ return (r.pctComplete||0)>=100; }).length;
+  var incCount = projIncidents.length;
+  var avgRpn   = total ? Math.round(projRows.reduce(function(s,r){ return s+r.sev*r.occ*r.det; },0)/total) : 0;
+  var maxRpn   = total ? projRows.reduce(function(mx,r){ return Math.max(mx,r.sev*r.occ*r.det); },0) : 0;
+
+  var kpis = '<div class="rpt-kpi-grid">'+
+    '<div class="rpt-kpi"><div class="rpt-kpi-val">'+total+'</div><div class="rpt-kpi-lbl">Failure Modes</div></div>'+
+    '<div class="rpt-kpi kpi-crit"><div class="rpt-kpi-val">'+critical+'</div><div class="rpt-kpi-lbl">Critical RPN ≥200</div></div>'+
+    '<div class="rpt-kpi"><div class="rpt-kpi-val">'+highRpn+'</div><div class="rpt-kpi-lbl">High RPN 100–199</div></div>'+
+    '<div class="rpt-kpi kpi-inc"><div class="rpt-kpi-val">'+incCount+'</div><div class="rpt-kpi-lbl">Incidents</div></div>'+
+    '<div class="rpt-kpi"><div class="rpt-kpi-val">'+openAct+'</div><div class="rpt-kpi-lbl">Open Actions</div></div>'+
+    '<div class="rpt-kpi"><div class="rpt-kpi-val">'+done+'</div><div class="rpt-kpi-lbl">Completed Actions</div></div>'+
+    '<div class="rpt-kpi"><div class="rpt-kpi-val">'+avgRpn+'</div><div class="rpt-kpi-lbl">Avg RPN</div></div>'+
+    '<div class="rpt-kpi"><div class="rpt-kpi-val">'+maxRpn+'</div><div class="rpt-kpi-lbl">Max RPN</div></div>'+
+  '</div>';
+
+  var chart = '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:18px 22px;margin-top:14px;background:#fafafa">'+
+    buildRpnDonutChart(projRows)+
+  '</div>';
+
+  return kpis + chart;
+}
+
+// ── PROJECT REPORT ──
+window.printProjectReport = async function() {
+  var proj = await getProject(currentProjectId);
+  if (!proj) return;
+
+  // Load incidents for this project
+  var storedInc = [];
+  try {
+    var r = await window.storage.get('incidents:'+currentUser+':'+currentProjectId);
+    storedInc = r ? JSON.parse(r.value) : [];
+    // backfill num
+    var mx=0; storedInc.forEach(function(i){if(i.num>mx)mx=i.num;}); storedInc.forEach(function(i){if(!i.num){mx++;i.num=mx;}});
+  } catch(e){}
+
+  var projRows = (proj.rows||[]);
+  var mode = proj.mode || 'simple';
+  var now  = new Date().toLocaleString();
+
+  var hdr = proj;
+  var html =
+    '<div class="rpt-cover">'+
+      '<div style="font-size:2.2rem">📋</div>'+
+      '<h1>'+rptEsc(proj.name)+'</h1>'+
+      (proj.description ? '<p style="color:#4a5568;max-width:600px;margin:6px auto">'+rptEsc(proj.description)+'</p>' : '')+
+      '<div class="rpt-mode-badge" style="margin:10px auto 16px">'+(mode==='advanced'?'🔬 Advanced':'⚡ Simplified')+' Mode &nbsp;|&nbsp; '+(hdr.confidentiality||'Business Use')+'</div>'+
+      '<table style="margin:0 auto;border-collapse:collapse;font-size:0.8rem;text-align:left;min-width:420px">'+
+        (hdr.fmeaId     ? '<tr><td style="color:#718096;padding:3px 12px 3px 0;white-space:nowrap">FMEA ID</td><td style="font-weight:600;padding:3px 0">'+rptEsc(hdr.fmeaId)+'</td></tr>' : '')+
+        (hdr.company    ? '<tr><td style="color:#718096;padding:3px 12px 3px 0">Company</td><td style="font-weight:600;padding:3px 0">'+rptEsc(hdr.company)+'</td></tr>' : '')+
+        (hdr.location   ? '<tr><td style="color:#718096;padding:3px 12px 3px 0">Location</td><td style="padding:3px 0">'+rptEsc(hdr.location)+'</td></tr>' : '')+
+        (hdr.customer   ? '<tr><td style="color:#718096;padding:3px 12px 3px 0">Customer / Product</td><td style="padding:3px 0">'+rptEsc(hdr.customer)+'</td></tr>' : '')+
+        (hdr.program    ? '<tr><td style="color:#718096;padding:3px 12px 3px 0">Model / Program</td><td style="padding:3px 0">'+rptEsc(hdr.program)+'</td></tr>' : '')+
+        (hdr.owner      ? '<tr><td style="color:#718096;padding:3px 12px 3px 0">Process Responsibility</td><td style="font-weight:600;padding:3px 0">'+rptEsc(hdr.owner)+'</td></tr>' : '')+
+        (hdr.team       ? '<tr><td style="color:#718096;padding:3px 12px 3px 0">Cross-Functional Team</td><td style="padding:3px 0">'+rptEsc(hdr.team)+'</td></tr>' : '')+
+        '<tr><td style="color:#718096;padding:3px 12px 3px 0">FMEA Start Date</td><td style="padding:3px 0">'+rptFormatDate(proj.createdAt)+'</td></tr>'+
+        '<tr><td style="color:#718096;padding:3px 12px 3px 0;font-weight:600;color:#c05621">Last Revised</td><td style="font-weight:700;color:#c05621;padding:3px 0">'+rptFormatDateTime(proj.updatedAt)+'</td></tr>'+
+      '</table>'+
+      '<p style="margin-top:14px;font-size:0.78rem;color:#a0aec0">Report generated: '+now+' &nbsp;|&nbsp; Author: '+rptEsc(currentUser)+'</p>'+
+    '</div>'+
+
+    '<div class="rpt-section rpt-avoid-break">'+
+      '<div class="rpt-section-title">📊 Summary</div>'+
+      buildKpiHtml(projRows, storedInc)+
+    '</div>'+
+
+    '<div class="rpt-section">'+
+      '<div class="rpt-section-title">🔴 Critical &amp; High Priority Failure Modes (RPN ≥ 100)</div>'+
+      (function(){
+        var critical = projRows.filter(function(r){ return r.sev*r.occ*r.det>=100; });
+        return critical.length ? buildFmeaTableHtml(critical, storedInc, mode) : '<p style="color:#a0aec0;font-size:0.82rem">No critical or high-RPN items.</p>';
+      })()+
+    '</div>'+
+
+    '<div class="rpt-section rpt-page-break">'+
+      '<div class="rpt-section-title">📋 All Failure Modes</div>'+
+      (projRows.length ? buildFmeaTableHtml(projRows, storedInc, mode) : '<p style="color:#a0aec0;font-size:0.82rem">No failure modes recorded.</p>')+
+    '</div>'+
+
+    '<div class="rpt-section rpt-page-break">'+
+      '<div class="rpt-section-title">⚠️ Incident Log ('+storedInc.length+')</div>'+
+      buildIncTableHtml(storedInc, projRows)+
+    '</div>'+
+
+    '<div class="rpt-footer">'+
+      '<span>AI-Powered FMEA Tool — Designed by Andrzej Grzegorczyk</span>'+
+      '<span>'+rptEsc(proj.name)+' | Generated '+now+'</span>'+
+    '</div>';
+
+  document.getElementById('reportContent').innerHTML = html;
+  document.getElementById('reportOverlay').style.display = 'block';
+  window.scrollTo(0,0);
+};
+
+// ── ALL PROJECTS REPORT ──
+window.printAllProjectsReport = async function() {
+  var list = await getProjectList();
+  if (!list.length) { alert('No projects to report on.'); return; }
+
+  var projects = await Promise.all(list.map(function(id){ return getProject(id); }));
+  projects = projects.filter(Boolean);
+
+  var now = new Date().toLocaleString();
+  var totalRows=0, totalCrit=0, totalInc=0, totalOpen=0;
+
+  // Load incidents per project
+  var allProjData = await Promise.all(projects.map(async function(p) {
+    var incs = [];
+    try {
+      var r = await window.storage.get('incidents:'+currentUser+':'+p.id);
+      incs = r ? JSON.parse(r.value) : [];
+      var mx=0; incs.forEach(function(i){if(i.num>mx)mx=i.num;}); incs.forEach(function(i){if(!i.num){mx++;i.num=mx;}});
+    } catch(e){}
+    return { proj: p, rows: p.rows||[], incs: incs };
+  }));
+
+  // Compute global KPIs
+  allProjData.forEach(function(d){
+    totalRows += d.rows.length;
+    totalCrit += d.rows.filter(function(r){ return r.sev*r.occ*r.det>=200; }).length;
+    totalInc  += d.incs.length;
+    totalOpen += d.rows.filter(function(r){ return r.action&&(r.pctComplete||0)<100; }).length;
+  });
+
+  var html =
+    '<div class="rpt-cover">'+
+      '<div style="font-size:2.2rem">🏭</div>'+
+      '<h1>All Projects — FMEA Summary Report</h1>'+
+      '<p>Report generated: '+now+' &nbsp;|&nbsp; Author: '+rptEsc(currentUser)+'</p>'+
+      '<p>'+projects.length+' projects | '+totalRows+' total failure modes</p>'+
+    '</div>'+
+
+    '<div class="rpt-section rpt-avoid-break">'+
+      '<div class="rpt-section-title">📊 Global Summary</div>'+
+      '<div class="rpt-kpi-grid">'+
+        '<div class="rpt-kpi"><div class="rpt-kpi-val">'+projects.length+'</div><div class="rpt-kpi-lbl">Projects</div></div>'+
+        '<div class="rpt-kpi"><div class="rpt-kpi-val">'+totalRows+'</div><div class="rpt-kpi-lbl">Total Failure Modes</div></div>'+
+        '<div class="rpt-kpi kpi-crit"><div class="rpt-kpi-val">'+totalCrit+'</div><div class="rpt-kpi-lbl">Critical (RPN≥200)</div></div>'+
+        '<div class="rpt-kpi kpi-inc"><div class="rpt-kpi-val">'+totalInc+'</div><div class="rpt-kpi-lbl">Total Incidents</div></div>'+
+        '<div class="rpt-kpi"><div class="rpt-kpi-val">'+totalOpen+'</div><div class="rpt-kpi-lbl">Open Actions</div></div>'+
+      '</div>'+
+    '</div>'+
+
+    '<div class="rpt-section">'+
+      '<div class="rpt-section-title">📁 Project Overview</div>'+
+      allProjData.map(function(d) {
+        var p = d.proj, prows = d.rows, pincs = d.incs;
+        var crit   = prows.filter(function(r){ return r.sev*r.occ*r.det>=200; }).length;
+        var high   = prows.filter(function(r){ var v=r.sev*r.occ*r.det; return v>=100&&v<200; }).length;
+        var open   = prows.filter(function(r){ return r.action&&(r.pctComplete||0)<100; }).length;
+        var done   = prows.filter(function(r){ return (r.pctComplete||0)>=100; }).length;
+        return '<div class="rpt-proj-card rpt-avoid-break">'+
+          '<div class="rpt-proj-name">📋 '+rptEsc(p.name)+'</div>'+
+          '<div class="rpt-proj-meta">'+(p.mode==='advanced'?'🔬 Advanced':'⚡ Simplified')+' &nbsp;|&nbsp; Last updated: <strong>'+rptFormatDateTime(p.updatedAt)+'</strong>'+(p.description?' &nbsp;|&nbsp; '+rptEsc(p.description):'')+' </div>'+
+          '<div class="rpt-proj-stats">'+
+            '<div><div class="rpt-proj-stat-lbl">Failure Modes</div><div class="rpt-proj-stat-val">'+prows.length+'</div></div>'+
+            '<div><div class="rpt-proj-stat-lbl">Critical ≥200</div><div class="rpt-proj-stat-val" style="color:#c53030">'+crit+'</div></div>'+
+            '<div><div class="rpt-proj-stat-lbl">High 100–199</div><div class="rpt-proj-stat-val" style="color:#c05621">'+high+'</div></div>'+
+            '<div><div class="rpt-proj-stat-lbl">Open Actions</div><div class="rpt-proj-stat-val">'+open+'</div></div>'+
+            '<div><div class="rpt-proj-stat-lbl">Completed</div><div class="rpt-proj-stat-val" style="color:#276749">'+done+'</div></div>'+
+            '<div><div class="rpt-proj-stat-lbl">Incidents</div><div class="rpt-proj-stat-val" style="color:#b7791f">'+pincs.length+'</div></div>'+
+          '</div>'+
+        '</div>';
+      }).join('')+
+    '</div>'+
+
+    allProjData.map(function(d, idx) {
+      var p = d.proj, prows = d.rows, pincs = d.incs;
+      var mode = p.mode || 'simple';
+      var critRows = prows.filter(function(r){ return r.sev*r.occ*r.det>=100; });
+      return '<div class="rpt-section rpt-page-break">'+
+        '<div class="rpt-section-title">📋 '+rptEsc(p.name)+' — Failure Modes</div>'+
+        '<p style="font-size:0.78rem;color:#718096;margin-bottom:12px">Last updated: <strong style="color:#c05621">'+rptFormatDateTime(p.updatedAt)+'</strong> &nbsp;|&nbsp; '+(p.mode==='advanced'?'🔬 Advanced':'⚡ Simplified')+' Mode</p>'+
+        buildKpiHtml(prows, pincs)+
+        (critRows.length ?
+          '<p style="font-size:0.78rem;font-weight:700;color:#c53030;margin-bottom:6px">🔴 High/Critical items (RPN≥100):</p>'+
+          buildFmeaTableHtml(critRows, pincs, mode) : '')+
+        (prows.length ?
+          '<p style="font-size:0.78rem;font-weight:700;color:#2d6a9f;margin:12px 0 6px">All failure modes:</p>'+
+          buildFmeaTableHtml(prows, pincs, mode) :
+          '<p style="color:#a0aec0;font-size:0.82rem">No failure modes.</p>')+
+        (pincs.length ?
+          '<p style="font-size:0.78rem;font-weight:700;color:#744210;margin:12px 0 6px">⚠️ Incidents ('+pincs.length+'):</p>'+
+          buildIncTableHtml(pincs, prows) : '')+
+      '</div>';
+    }).join('')+
+
+    '<div class="rpt-footer">'+
+      '<span>AI-Powered FMEA Tool — Designed by Andrzej Grzegorczyk</span>'+
+      '<span>All Projects Report | Generated '+now+'</span>'+
+    '</div>';
+
+  document.getElementById('reportContent').innerHTML = html;
+  document.getElementById('reportOverlay').style.display = 'block';
+  window.scrollTo(0,0);
+};
+
+// ══════════════════════════════════════════════════════════
+//  SEARCH & FILTER
+// ══════════════════════════════════════════════════════════
+var currentRpnFilter = 'all';
+
+function rpnCategory(rpn) {
+  if (rpn < 50)  return 'low';
+  if (rpn < 100) return 'med';
+  if (rpn < 200) return 'high';
+  return 'crit';
+}
+
+window.setRpnFilter = function(filter) {
+  currentRpnFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.filter === filter);
+  });
+  applySearch();
+};
+
+window.applySearch = function() {
+  var query = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+  var clearBtn = document.getElementById('searchClearBtn');
+  clearBtn.style.display = query ? 'block' : 'none';
+
+  var trs = document.querySelectorAll('#fmeaBody tr');
+  var visible = 0, total = rows.length;
+
+  trs.forEach(function(tr) {
+    var id = tr.dataset.id;
+    var row = rows.find(function(r){ return r.id === id; });
+    if (!row) { tr.classList.add('search-hidden'); return; }
+
+    var rpn = rpnVal(row);
+    var passesRpn = currentRpnFilter === 'all' || rpnCategory(rpn) === currentRpnFilter;
+
+    var passesText = true;
+    if (query) {
+      var haystack = [
+        row.step, row.failureMode, row.effect, row.cause,
+        row.action, row.owner, row.comment, row.sourceFile, row.sourcePage,
+        String(row.sev), String(row.occ), String(row.det), String(rpn)
+      ].join(' ').toLowerCase();
+      passesText = haystack.indexOf(query) !== -1;
+    }
+
+    var show = passesRpn && passesText;
+    tr.classList.toggle('search-hidden', !show);
+    if (show) visible++;
+  });
+
+  var countEl = document.getElementById('searchCount');
+  if (query || currentRpnFilter !== 'all') {
+    countEl.textContent = visible + ' of ' + total + ' rows';
+  } else {
+    countEl.textContent = '';
+  }
+};
+
+window.clearSearch = function() {
+  document.getElementById('searchInput').value = '';
+  currentRpnFilter = 'all';
+  document.querySelectorAll('.filter-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.filter === 'all');
+  });
+  applySearch();
+};
+
+
+// ══════════════════════════════════════════════════════════
+//  PROJECT HEADER SETTINGS
+// ══════════════════════════════════════════════════════════
+window.openProjectSettings = async function() {
+  var proj = await getProject(currentProjectId);
+  if (!proj) return;
+  var fields = {
+    setProjName: proj.name || '',
+    setProjFmeaId: proj.fmeaId || '',
+    setProjCompany: proj.company || '',
+    setProjLocation: proj.location || '',
+    setProjCustomer: proj.customer || '',
+    setProjProgram: proj.program || '',
+    setProjOwner: proj.owner || '',
+    setProjTeam: proj.team || '',
+    setProjDesc: proj.description || '',
+  };
+  Object.keys(fields).forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = fields[id];
+  });
+  document.getElementById('setProjConfidentiality').value = proj.confidentiality || 'Business Use';
+  var d = document.getElementById('setProjDates');
+  if (d) d.innerHTML = ' FMEA Start: <strong>' + rptFormatDate(proj.createdAt) + '</strong> &nbsp;|&nbsp; Last Revised: <strong>' + rptFormatDateTime(proj.updatedAt) + '</strong> &nbsp;|&nbsp; Mode: <strong>' + (proj.mode === 'advanced' ? '🔬 Advanced' : '⚡ Simplified') + '</strong>';
+  document.getElementById('projSettingsModal').classList.add('open');
+};
+
+window.closeProjSettings = function() {
+  document.getElementById('projSettingsModal').classList.remove('open');
+};
+
+window.saveProjSettings = async function() {
+  var name = document.getElementById('setProjName').value.trim();
+  if (!name) { alert('Project name is required.'); return; }
+  var proj = await getProject(currentProjectId);
+  if (!proj) return;
+  proj.name            = name;
+  proj.fmeaId          = document.getElementById('setProjFmeaId').value.trim();
+  proj.company         = document.getElementById('setProjCompany').value.trim();
+  proj.location        = document.getElementById('setProjLocation').value.trim();
+  proj.customer        = document.getElementById('setProjCustomer').value.trim();
+  proj.program         = document.getElementById('setProjProgram').value.trim();
+  proj.owner           = document.getElementById('setProjOwner').value.trim();
+  proj.confidentiality = document.getElementById('setProjConfidentiality').value;
+  proj.team            = document.getElementById('setProjTeam').value.trim();
+  proj.description     = document.getElementById('setProjDesc').value.trim();
+  await saveProject(proj);
+  // Update banner
+  document.getElementById('bannerName').textContent = proj.name;
+  document.getElementById('bannerDesc').textContent = proj.description || '';
+  closeProjSettings();
+  var el = document.getElementById('bannerSave');
+  el.textContent = '✓ Header saved';
+  setTimeout(function(){ el.textContent = ''; }, 2500);
+};
+
+// (switchTab moved to top of IIFE)
+
+// ══════════════════════════════════════════════════════════
+//  ANALYZE
+// ══════════════════════════════════════════════════════════
+window.analyze=function(){
+  var combined=getContent();
+  if(!combined){setStatus('Please upload a file or paste text first.','error');return;}
+  setStatus('<span class="spinner"></span> Analyzing document...','loading');
+  document.getElementById('analyzeBtn').disabled=true;
+
+  var prompt=
+    'You are a senior FMEA engineer. Analyze the technical document below and identify failure modes.\n\n'+
+    'Rules:\n'+
+    '1. Find 15 to 25 failure modes covering all major subsystems.\n'+
+    '2. For every DANGER, WARNING, CAUTION notice — create at least one failure mode.\n'+
+    '3. Return ONLY a raw JSON array. No markdown. No explanation. No code fences. Start with [ and end with ].\n\n'+
+    'Each array item must have exactly these keys:\n'+
+    '{"step":"...","failureMode":"...","effect":"...","cause":"...","sev":7,"occ":5,"det":5,"action":"...","sourceFile":"","sourcePage":""}\n\n'+
+    'Severity sev 1-10: 10=death or total loss, 7=major damage, 4=minor issue, 1=no effect.\n'+
+    'Occurrence occ 1-10: 10=happens daily, 5=occasionally, 1=extremely rare.\n'+
+    'Detection det 1-10: 10=impossible to detect, 5=needs effort, 1=automatic alarm.\n\n'+
+    'DOCUMENT:\n'+combined.substring(0,150000);
+
+  fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:12000,
+      messages:[{role:'user',content:prompt}]
+    })
+  })
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(d.error){setStatus('❌ API error: '+d.error.message,'error');return;}
+    var raw=d.content.map(function(b){return b.text||'';}).join('').trim();
+    // Strip any accidental markdown fences
+    raw=raw.replace(/^```[a-z]*\n?/i,'').replace(/\n?```$/,'').trim();
+    // Find the JSON array in the response
+    var start=raw.indexOf('[');
+    var end=raw.lastIndexOf(']');
+    if(start===-1||end===-1){setStatus('❌ No JSON array found in response. Try again.','error');console.error('Raw response:',raw);return;}
+    raw=raw.substring(start,end+1);
+    var items;
+    try{
+      items=JSON.parse(raw);
+    }catch(e){
+      // Try to recover truncated JSON
+      var lb=raw.lastIndexOf('},');
+      if(lb!==-1){try{items=JSON.parse(raw.substring(0,lb+1)+']');}catch(e2){items=[];}}
+      else{items=[];}
+    }
+    if(!items||!items.length){setStatus('❌ AI returned 0 items. Check console for details.','error');console.error('Parsed empty. Raw:',raw);return;}
+    // Store usage for later use by confirmReview
+    window._lastAnalyzeUsage = d.usage || {};
+    var actualIn  = (d.usage||{}).input_tokens  || 0;
+    var actualOut = (d.usage||{}).output_tokens || 0;
+    var actualCost = ((actualIn/1e6)*3.00) + ((actualOut/1e6)*15.00);
+    function fmtC(c){ return c<0.001?'<$0.001':c<0.01?'$'+c.toFixed(4):c<0.1?'$'+c.toFixed(3):'$'+c.toFixed(2); }
+    setStatus('✅ '+items.length+' failure modes generated. Tokens: '+actualIn.toLocaleString()+' in / '+actualOut.toLocaleString()+' out · Cost: '+fmtC(actualCost)+'. Review before adding to FMEA →','');
+    openReview(items);
+  })
+  .catch(function(e){setStatus('❌ Network error: '+(e.message||'Unknown'),'error');console.error(e);})
+  .finally(function(){document.getElementById('analyzeBtn').disabled=false;});
+};
+
+// ══════════════════════════════════════════════════════════
+//  EXPORT / IMPORT
+// ══════════════════════════════════════════════════════════
+window.exportCSV=function(){
+  var h=['#','Process Step','Failure Mode','Effect','Cause','S','O','D','RPN','Recommended Actions','Action Owner','Action Due Date','% Complete','Source File','Source Page','Notes'];
+  var b=rows.map(function(r,i){return[i+1,'"'+r.step+'"','"'+r.failureMode+'"','"'+r.effect+'"','"'+r.cause+'"',r.sev,r.occ,r.det,rpnVal(r),'"'+r.action+'"','"'+(r.owner||'')+'"','"'+(r.dueDate||'')+'"',(r.pctComplete||0),'"'+r.sourceFile+'"','"'+r.sourcePage+'"','"'+(r.comment||'')+'"'].join(',');});
+  dl([h.join(',')].concat(b).join('\n'),'FMEA.csv','text/csv');
+};
+window.exportJSON=function(){
+  dl(JSON.stringify({version:1,exportedAt:new Date().toISOString(),rows:rows.map(function(r){return{step:r.step,failureMode:r.failureMode,effect:r.effect,cause:r.cause,sev:r.sev,occ:r.occ,det:r.det,rpn:rpnVal(r),action:r.action,owner:r.owner,dueDate:r.dueDate,pctComplete:r.pctComplete,sourceFile:r.sourceFile,sourcePage:r.sourcePage,comment:r.comment,_rowH:r._rowH};})},null,2),'FMEA.json','application/json');
+};
+window.triggerImport=function(){document.getElementById('importInput').click();};
+window.importJSON=function(input){
+  var file=input.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var p=JSON.parse(e.target.result),items=Array.isArray(p)?p:(p.rows||[]);
+      if(!items.length){setStatus('⚠️ No rows found.','error');return;}
+      showConfirm('Import JSON','Replace current rows with imported data?',function(){
+        rows=items.map(function(it){return newRow(it);});
+        renderTable();scheduleSave();setStatus('✅ Imported '+rows.length+' rows.','');
+      });
+    }catch(err){setStatus('❌ Invalid JSON: '+err.message,'error');}
+    input.value='';
+  };
+  reader.readAsText(file);
+};
+function dl(content, name, type) {
+  try {
+    // Encode as UTF-8 bytes via TextEncoder to safely handle all Unicode characters
+    var bytes = new TextEncoder().encode(content);
+    var blob  = new Blob([bytes], { type: type + ';charset=utf-8' });
+    var url   = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  } catch(e) {
+    // Final fallback: plain data URI (ASCII-safe only)
+    try {
+      var a2 = document.createElement('a');
+      a2.href = 'data:' + type + ';charset=utf-8,' + encodeURIComponent(content);
+      a2.download = name;
+      document.body.appendChild(a2);
+      a2.click();
+      document.body.removeChild(a2);
+    } catch(e2) {
+      console.error('Download failed:', e2);
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════
+['upload','fmea','incidents','guide'].forEach(function(t){document.getElementById('panel-'+t).style.display='none';});
+
+})();
+</script>
+
+
+<!-- ═══════════════════════════════════════════════════
+     PRINT REPORT OVERLAY
+════════════════════════════════════════════════════ -->
+<div id="reportOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:white;overflow:auto">
+  <div id="reportContent" style="max-width:1100px;margin:0 auto;padding:30px 40px;font-family:'Segoe UI',sans-serif;color:#1a202c">
+    <!-- filled by JS -->
+  </div>
+  <div id="reportActions" style="position:fixed;top:16px;right:16px;display:flex;gap:8px;z-index:10000">
+    <button onclick="window.print()" style="background:#2d6a9f;color:white;border:none;border-radius:8px;padding:9px 18px;font-size:0.86rem;font-weight:600;cursor:pointer">🖨 Print / Save PDF</button>
+    <button onclick="closeReport()" style="background:white;color:#2d6a9f;border:1.5px solid #2d6a9f;border-radius:8px;padding:9px 18px;font-size:0.86rem;font-weight:600;cursor:pointer">✕ Close</button>
+  </div>
+</div>
+
+<style>
+/* ── PRINT STYLES ── */
+@media print {
+  body > *:not(#reportOverlay) { display: none !important; }
+  #reportOverlay { position: static !important; overflow: visible !important; }
+  #reportActions { display: none !important; }
+  #reportContent { padding: 0 !important; max-width: 100% !important; }
+  .rpt-page-break { page-break-before: always; }
+  .rpt-avoid-break { page-break-inside: avoid; }
+}
+
+/* ── REPORT STYLES ── */
+.rpt-cover { text-align:center; padding: 60px 0 40px; border-bottom: 3px solid #1e3a5f; margin-bottom: 32px; }
+.rpt-cover h1 { font-size: 1.8rem; color: #1e3a5f; margin-bottom: 8px; }
+.rpt-cover p  { color: #718096; font-size: 0.9rem; margin: 4px 0; }
+.rpt-cover .rpt-mode-badge { display:inline-block; background:#ebf4ff; border:1px solid #bee3f8; border-radius:6px; padding:3px 12px; font-size:0.8rem; font-weight:600; color:#2b6cb0; margin-top:10px; }
+
+.rpt-section { margin-bottom: 28px; }
+.rpt-section-title { font-size: 1rem; font-weight: 700; color: #1e3a5f; border-bottom: 2px solid #bee3f8; padding-bottom: 6px; margin-bottom: 14px; }
+
+.rpt-kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+.rpt-kpi { background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; text-align: center; }
+.rpt-kpi-val { font-size: 1.6rem; font-weight: 700; color: #1e3a5f; }
+.rpt-kpi-lbl { font-size: 0.72rem; color: #718096; margin-top: 3px; }
+.rpt-kpi.kpi-crit { border-color: #fc8181; background: #fff5f5; }
+.rpt-kpi.kpi-crit .rpt-kpi-val { color: #c53030; }
+.rpt-kpi.kpi-inc { border-color: #fbd38d; background: #fffaf0; }
+.rpt-kpi.kpi-inc .rpt-kpi-val { color: #c05621; }
+
+.rpt-table { width:100%; border-collapse:collapse; font-size:0.72rem; margin-bottom:8px; }
+.rpt-table th { background:#1e3a5f; color:white; padding:6px 8px; text-align:left; font-weight:600; white-space:nowrap; }
+.rpt-table td { padding:5px 8px; border-bottom:1px solid #e2e8f0; vertical-align:top; line-height:1.4; }
+.rpt-table tr:nth-child(even) td { background:#f7fafc; }
+.rpt-table tr:hover td { background:#ebf4ff; }
+.rpt-table .td-rpn { font-weight:700; border-radius:4px; padding:2px 6px; text-align:center; white-space:nowrap; }
+.rpt-rpn-low  { background:#c6f6d5; color:#276749; }
+.rpt-rpn-med  { background:#fefcbf; color:#7b6d00; }
+.rpt-rpn-high { background:#fed7d7; color:#9b2c2c; }
+.rpt-rpn-crit { background:#e53e3e; color:white; }
+.rpt-ap-h { background:#e53e3e; color:white; border-radius:4px; padding:1px 6px; font-size:0.68rem; font-weight:700; }
+.rpt-ap-m { background:#ed8936; color:white; border-radius:4px; padding:1px 6px; font-size:0.68rem; font-weight:700; }
+.rpt-ap-l { background:#38a169; color:white; border-radius:4px; padding:1px 6px; font-size:0.68rem; font-weight:700; }
+
+.rpt-inc-table { width:100%; border-collapse:collapse; font-size:0.72rem; }
+.rpt-inc-table th { background:#744210; color:white; padding:5px 8px; text-align:left; font-weight:600; }
+.rpt-inc-table td { padding:5px 8px; border-bottom:1px solid #fbd38d; vertical-align:top; }
+.rpt-inc-table tr:nth-child(even) td { background:#fffaf0; }
+
+.rpt-proj-card { border:1px solid #e2e8f0; border-radius:8px; padding:14px 18px; margin-bottom:12px; }
+.rpt-proj-name { font-size:0.95rem; font-weight:700; color:#1e3a5f; }
+.rpt-proj-meta { font-size:0.76rem; color:#718096; margin-top:3px; }
+.rpt-proj-stats { display:grid; grid-template-columns:repeat(5,auto); gap:10px 18px; margin-top:10px; font-size:0.78rem; }
+.rpt-proj-stat-lbl { color:#718096; }
+.rpt-proj-stat-val { font-weight:700; color:#2d3748; }
+
+.rpt-footer { margin-top:40px; padding-top:16px; border-top:1px solid #e2e8f0; font-size:0.72rem; color:#a0aec0; display:flex; justify-content:space-between; }
+</style>
+
+
+<!-- ═══════════════════════════════════════════════════
+     AI REVIEW OVERLAY
+════════════════════════════════════════════════════ -->
+<div id="reviewOverlay" class="review-overlay">
+
+  <div class="review-header">
+    <div>
+      <h2>🔍 Review AI-Generated Failure Modes</h2>
+      <div class="review-header-sub">Accept, edit or reject each item before adding to your FMEA worksheet</div>
+    </div>
+    <div class="review-progress">
+      <div class="review-progress-lbl">
+        <span id="revProgressTxt">0 of 0 reviewed</span>
+        <span id="revAcceptedTxt">0 accepted</span>
+      </div>
+      <div class="review-progress-bar"><div class="review-progress-fill" id="revProgressFill" style="width:0%"></div></div>
+    </div>
+    <div class="review-actions-hdr">
+      <button class="btn-hdr" onclick="reviewAcceptAll()">✓ Accept All</button>
+      <button class="btn-hdr" onclick="reviewRejectAll()">✕ Reject All</button>
+    </div>
+  </div>
+
+  <div class="review-body" id="reviewBody"></div>
+
+  <div class="review-footer">
+    <div class="review-footer-stats" id="reviewFooterStats"></div>
+    <button class="btn btn-secondary" onclick="closeReview()" style="padding:9px 20px">Cancel</button>
+    <button class="btn btn-primary" id="reviewConfirmBtn" onclick="confirmReview()" style="padding:9px 20px">
+      ✅ Add Accepted to FMEA
+    </button>
+  </div>
+</div>
+
+</body>
+</html>
