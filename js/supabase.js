@@ -6,29 +6,18 @@
 var SUPABASE_URL = 'https://eyzbfylsbicoeoszcxfs.supabase.co';
 var SUPABASE_KEY = 'sb_publishable_dbjWjVoJnaCCO2qdqjvaDA_iSTriMEb';
 
-// Initialize Supabase Client
+// Capture the Supabase library BEFORE our var declaration shadows window.supabase
+var _supabaseLib = window.supabase;
+
+// Our client instance (separate from the library global)
 var supabase = null;
 
-// Initialize immediately - library should be loaded by now
-if (window.supabase && typeof window.supabase.createClient === 'function') {
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// Initialize immediately using captured library reference
+if (_supabaseLib && typeof _supabaseLib.createClient === 'function') {
+  supabase = _supabaseLib.createClient(SUPABASE_URL, SUPABASE_KEY);
   console.log('✅ Supabase client initialized');
 } else {
-  console.error('❌ Supabase library not found on window.supabase');
-  // Try to initialize on window.supabase becoming available
-  var checkCount = 0;
-  var checkInterval = setInterval(function() {
-    if (window.supabase && typeof window.supabase.createClient === 'function') {
-      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-      console.log('✅ Supabase client initialized (delayed)');
-      clearInterval(checkInterval);
-    }
-    checkCount++;
-    if (checkCount > 50) {
-      clearInterval(checkInterval);
-      console.error('❌ Supabase library failed to load after 5 seconds');
-    }
-  }, 100);
+  console.error('❌ Supabase library not found. Check CDN script tag.');
 }
 
 // ============================================================================
