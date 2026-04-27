@@ -15,48 +15,220 @@ var incidents = [];
 var saveTimer = null;
 var confirmCb = null;
 
-// ── Storage abstraction ──
+// ── Storage abstraction (Supabase-aware) ──
 var Storage = {
   get: async function(key) {
+    // Try Claude.ai storage first
     if (window.storage && window.storage.get) {
-      try { return await window.storage.get(key); } catch(e) { return null; }
+      try { return await window.storage.get(key); } catch(e) {}
     }
+
+    // Try Supabase
+    if (typeof supabase !== 'undefined' && currentUserId) {
+      try {
+        // Parse key pattern to determine table and query
+        if (key.startsWith('proj:')) {
+          // proj:[user]:[id] → projects table
+          var parts = key.split(':');
+          var projectId = parts[2];
+          var result = await supabaseGet(
+            supabase.from('projects').select('*').eq('id', projectId).eq('user_id', currentUserId).single()
+          );
+          if (result) {
+            return { key: key, value: JSON.stringify(result) };
+          }
+        } else if (key === 'projlist:' + currentUser) {
+          // projlist:[user] → list of project IDs
+          var projects = await supabaseGet(
+            supabase.from('projects').select('id').eq('user_id', currentUserId)
+          );
+          if (projects) {
+            var ids = projects.map(function(p) { return p.id; });
+            return { key: key, value: JSON.stringify(ids) };
+          }
+        } else if (key.startsWith('incidents:')) {
+          // incidents:[user]:[projectId] → incidents table
+          var parts = key.split(':');
+          var projectId = parts[2];
+          var incidents = await supabaseGet(
+            supabase.from('incidents').select('*').eq('project_id', projectId).eq('user_id', currentUserId)
+          );
+          if (incidents) {
+            return { key: key, value: JSON.stringify(incidents) };
+          }
+        } else if (key.startsWith('apikey:')) {
+          // apikey:[user]:[provider] → api_keys table (decrypted)
+          var parts = key.split(':');
+          var provider = parts[2];
+          var apiKey = await supabaseGet(
+            supabase.from('api_keys').select('api_key_encrypted').eq('user_id', currentUserId).eq('provider', provider).single()
+          );
+          if (apiKey && apiKey.api_key_encrypted) {
+            return { key: key, value: decryptApiKey(apiKey.api_key_encrypted) };
+          }
+        } else if (key.startsWith('provider:') || key.startsWith('groqModel:') || key.startsWith('groqMaxTokens:')) {
+          // provider/groqModel/groqMaxTokens → provider_settings table
+          var settingName = '';
+          if (key.startsWith('provider:')) {
+            settingName = 'provider';
+          } else if (key.startsWith('groqModel:')) {
+            settingName = 'groq_model';
+          } else if (key.startsWith('groqMaxTokens:')) {
+            settingName = 'groq_max_tokens';
+          }
+
+          var setting = await supabaseGet(
+            supabase.from('provider_settings')
+              .select('setting_value')
+              .eq('user_id', currentUserId)
+              .eq('setting_name', settingName)
+              .single()
+          );
+          if (setting) {
+            return { key: key, value: setting.setting_value };
+          }
+        }
+      } catch (e) {
+        console.log('Supabase get error for key', key, ':', e.message);
+      }
+    }
+
+    // Fallback to localStorage
     var v = localStorage.getItem(key);
     return v !== null ? { key: key, value: v } : null;
   },
+
   set: async function(key, value) {
+    // Try Claude.ai storage first
     if (window.storage && window.storage.set) {
-      return await window.storage.set(key, value);
+      try { return await window.storage.set(key, value); } catch(e) {}
     }
+
+    // Try Supabase
+    if (typeof supabase !== 'undefined' && currentUserId) {
+      try {
+        if (key.startsWith('proj:')) {
+          // proj:[user]:[id] → projects table (upsert)
+          var proj = JSON.parse(value);
+          var result = await supabaseQuery(
+            supabase.from('projects').upsert({
+              id: proj.id,
+              user_id: currentUserId,
+              name: proj.name,
+              mode: proj.mode,
+              description: proj.description,
+              fmea_id: proj.fmeaId,
+              company: proj.company,
+              location: proj.location,
+              customer: proj.customer,
+              program: proj.program,
+              owner: proj.owner,
+              confidentiality: proj.confidentiality,
+              team: proj.team,
+              hidden_cols: proj.hiddenCols,
+              updated_at: new Date().toISOString()
+            })
+          );
+          return { key: key, value: value };
+        } else if (key === 'projlist:' + currentUser) {
+          // projlist is computed dynamically, don't need to save
+          return { key: key, value: value };
+        } else if (key.startsWith('apikey:')) {
+          // apikey:[user]:[provider] → api_keys table (encrypted)
+          var parts = key.split(':');
+          var provider = parts[2];
+          await supabaseQuery(
+            supabase.from('api_keys').upsert({
+              user_id: currentUserId,
+              provider: provider,
+              api_key_encrypted: encryptApiKey(value)
+            })
+          );
+          return { key: key, value: value };
+        } else if (key.startsWith('provider:') || key.startsWith('groqModel:') || key.startsWith('groqMaxTokens:')) {
+          // provider/groqModel/groqMaxTokens → provider_settings table
+          var settingName = '';
+          var provider = 'default';
+          if (key.startsWith('provider:')) {
+            settingName = 'provider';
+          } else if (key.startsWith('groqModel:')) {
+            settingName = 'groq_model';
+            provider = 'groq';
+          } else if (key.startsWith('groqMaxTokens:')) {
+            settingName = 'groq_max_tokens';
+            provider = 'groq';
+          }
+
+          await supabaseQuery(
+            supabase.from('provider_settings').upsert({
+              user_id: currentUserId,
+              provider: provider,
+              setting_name: settingName,
+              setting_value: value
+            })
+          );
+          return { key: key, value: value };
+        }
+      } catch (e) {
+        console.log('Supabase set error for key', key, ':', e.message);
+      }
+    }
+
+    // Fallback to localStorage
     localStorage.setItem(key, value);
     return { key: key, value: value };
   },
+
   delete: async function(key) {
+    // Try Claude.ai storage first
     if (window.storage && window.storage.delete) {
-      return await window.storage.delete(key);
+      try { return await window.storage.delete(key); } catch(e) {}
     }
+
+    // Try Supabase
+    if (typeof supabase !== 'undefined' && currentUserId) {
+      try {
+        if (key.startsWith('proj:')) {
+          var parts = key.split(':');
+          var projectId = parts[2];
+          await supabaseQuery(supabase.from('projects').delete().eq('id', projectId).eq('user_id', currentUserId));
+          return { key: key, deleted: true };
+        }
+      } catch (e) {
+        console.log('Supabase delete error for key', key, ':', e.message);
+      }
+    }
+
+    // Fallback to localStorage
     localStorage.removeItem(key);
     return { key: key, deleted: true };
   }
 };
 
-// ── API key helpers ──
+// ── API key helpers (Supabase-aware) ──
 function getProvider() {
   return currentProvider || 'claude';
 }
 function setProvider(provider) {
   currentProvider = provider || 'claude';
-  localStorage.setItem('provider:' + (currentUser || ''), currentProvider);
+  (async function() {
+    await Storage.set('provider:' + (currentUser || ''), currentProvider);
+  })();
 }
 function getApiKeyForProvider(provider) {
   provider = provider || getProvider();
   var key = 'apikey:' + (currentUser || '') + ':' + provider;
-  return localStorage.getItem(key) || '';
+  return (async function() {
+    var r = await Storage.get(key);
+    return r ? r.value : '';
+  })();
 }
 function setApiKeyForProvider(provider, key) {
   provider = provider || getProvider();
   var k = 'apikey:' + (currentUser || '') + ':' + provider;
-  localStorage.setItem(k, key);
+  (async function() {
+    await Storage.set(k, key);
+  })();
 }
 function getApiKey() {
   return getApiKeyForProvider(getProvider());
@@ -73,16 +245,26 @@ async function getProjectList() {
   try {
     var r = await Storage.get(projListKey());
     return r ? JSON.parse(r.value) : [];
-  } catch(e) { return []; }
+  } catch(e) {
+    console.error('Error getting project list:', e);
+    return [];
+  }
 }
 async function saveProjectList(list) {
-  await Storage.set(projListKey(), JSON.stringify(list));
+  // Project list is dynamically computed from projects table, no need to save
+  return;
 }
 async function getProject(id) {
   try {
     var r = await Storage.get(projKey(id));
-    return r ? JSON.parse(r.value) : null;
-  } catch(e) { return null; }
+    if (!r || !r.value) return null;
+
+    var proj = JSON.parse(r.value);
+    return proj;
+  } catch(e) {
+    console.error('Error getting project:', e);
+    return null;
+  }
 }
 async function saveProject(proj) {
   proj.updatedAt = new Date().toISOString();

@@ -252,6 +252,9 @@ function getMaxTokensForProvider(provider) {
   return limits[provider] || 12000;
 }
 
+// Note: This uses localStorage for synchronous access.
+// The value is synced from Supabase via Storage.set() in projects.js
+
 function getGroqModel() {
   var modelSel = document.getElementById('groqModelSelect');
   return (modelSel && modelSel.value) ? modelSel.value : 'mixtral-8x7b-32768';

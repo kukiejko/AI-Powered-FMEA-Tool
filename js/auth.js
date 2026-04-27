@@ -1,4 +1,49 @@
-var USERS = { admin: 'fmea2024' };
+// ============================================================================
+// AUTHENTICATION MODULE - SUPABASE
+// ============================================================================
+
+var currentUser = null;
+var currentUserId = null;
+
+// ============================================================================
+// UI HELPERS
+// ============================================================================
+
+window.toggleSignupMode = function() {
+  var loginForm = document.getElementById('loginFormMode');
+  var signupForm = document.getElementById('signupFormMode');
+  var loginBtn = document.getElementById('loginBtn');
+  var signupBtn = document.getElementById('signupBtn');
+  var loginTitle = document.getElementById('loginTitle');
+  var toggleSignupText = document.getElementById('toggleSignupText');
+  var toggleLoginText = document.getElementById('toggleLoginText');
+
+  if (loginForm.style.display === 'none') {
+    // Switch to login
+    loginForm.style.display = 'block';
+    signupForm.style.display = 'none';
+    loginBtn.style.display = 'block';
+    signupBtn.style.display = 'none';
+    loginTitle.textContent = 'Sign in to continue';
+    toggleSignupText.style.display = 'inline';
+    toggleLoginText.style.display = 'none';
+    clearLoginErrors();
+  } else {
+    // Switch to signup
+    loginForm.style.display = 'none';
+    signupForm.style.display = 'block';
+    loginBtn.style.display = 'none';
+    signupBtn.style.display = 'block';
+    loginTitle.textContent = 'Create your account';
+    toggleSignupText.style.display = 'none';
+    toggleLoginText.style.display = 'inline';
+    clearLoginErrors();
+  }
+};
+
+window.showForgotPassword = function() {
+  alert('Password reset functionality coming soon.\n\nFor now, please contact your administrator.');
+};
 
 window.toggleColumn = function(key) {
   hiddenCols[key] = !hiddenCols[key];
@@ -32,45 +77,20 @@ window.selectMode = function(mode) {
   document.getElementById('modeAdvancedCard').classList.toggle('mode-card-active', mode === 'advanced');
 };
 
-window.doLogin = function () {
-  var u = document.getElementById('loginUser').value.trim();
-  var p = document.getElementById('loginPass').value;
-  if (USERS[u] && USERS[u] === p) {
-    currentUser = u;
-    // Read provider selection
-    var providerSel = document.getElementById('loginProvider');
-    if (providerSel) {
-      setProvider(providerSel.value);
-    }
-    // Read API key if provided on login screen
-    var apiField = document.getElementById('loginApiKey');
-    if (apiField && apiField.value.trim()) {
-      setApiKey(apiField.value.trim());
-    }
-    document.getElementById('loginErr').textContent = '';
-    document.getElementById('loginPass').value = '';
-    document.getElementById('dashUserLabel').textContent = '👤 ' + u;
-    document.getElementById('workUserLabel').textContent = '👤 ' + u;
-    showScreen('screenDash');
-    loadDashboard();
-  } else {
-    document.getElementById('loginErr').textContent = 'Invalid username or password.';
-  }
-};
-
-window.doLogout = function () {
-  currentUser = null;
-  currentProjectId = null;
-  rows = []; fileTexts = []; fileNames = [];
-  document.getElementById('loginUser').value = '';
-  document.getElementById('loginPass').value = '';
-  showScreen('screenLogin');
-};
-
 window.toggleApiKeyVisibility = function(inputId) {
   var input = document.getElementById(inputId);
   if (!input) return;
   input.type = input.type === 'password' ? 'text' : 'password';
+};
+
+window.clearLoginErrors = function() {
+  var err = document.getElementById('loginErr');
+  if (err) err.textContent = '';
+};
+
+window.showLoginError = function(message) {
+  var err = document.getElementById('loginErr');
+  if (err) err.textContent = '❌ ' + message;
 };
 
 window.updateLoginApiKeyUI = function() {
@@ -110,3 +130,221 @@ window.updateLoginApiKeyUI = function() {
   }
   if (hint) hint.textContent = hints[provider];
 };
+
+// ============================================================================
+// LOGIN FUNCTION
+// ============================================================================
+
+window.doLogin = async function() {
+  clearLoginErrors();
+
+  var email = document.getElementById('loginEmail').value.trim();
+  var password = document.getElementById('loginPass').value;
+
+  if (!email || !password) {
+    showLoginError('Please enter email and password');
+    return;
+  }
+
+  // Show loading state
+  var btn = document.querySelector('#loginBtn');
+  var originalText = btn.textContent;
+  btn.textContent = 'Signing in...';
+  btn.disabled = true;
+
+  try {
+    await loginWithEmail(email, password);
+
+    // Get current user
+    var user = await getCurrentUser();
+    if (user) {
+      currentUser = email;
+      currentUserId = user.id;
+
+      // Store session info
+      localStorage.setItem('currentUser', email);
+      localStorage.setItem('currentUserId', user.id);
+
+      // Update UI
+      document.getElementById('dashUserLabel').textContent = '👤 ' + email;
+      document.getElementById('workUserLabel').textContent = '👤 ' + email;
+
+      // Navigate to dashboard
+      showScreen('screenDash');
+      loadDashboard();
+    }
+  } catch (err) {
+    showLoginError(err.message);
+    console.error('Login failed:', err);
+  } finally {
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
+};
+
+// ============================================================================
+// SIGNUP FUNCTION
+// ============================================================================
+
+window.doSignup = async function() {
+  clearLoginErrors();
+
+  var email = document.getElementById('signupEmail').value.trim();
+  var password = document.getElementById('signupPass').value;
+  var password2 = document.getElementById('signupPass2').value;
+
+  if (!email || !password || !password2) {
+    showLoginError('Please fill in all fields');
+    return;
+  }
+
+  if (password.length < 6) {
+    showLoginError('Password must be at least 6 characters');
+    return;
+  }
+
+  if (password !== password2) {
+    showLoginError('Passwords do not match');
+    return;
+  }
+
+  // Show loading state
+  var btn = document.getElementById('signupBtn');
+  var originalText = btn.textContent;
+  btn.textContent = 'Creating account...';
+  btn.disabled = true;
+
+  try {
+    await signupWithEmail(email, password);
+
+    showLoginError('Account created! Please check your email to confirm. Then sign in.');
+
+    // Clear form
+    document.getElementById('signupEmail').value = '';
+    document.getElementById('signupPass').value = '';
+    document.getElementById('signupPass2').value = '';
+
+    // Switch back to login after 2 seconds
+    setTimeout(function() {
+      toggleSignupMode();
+    }, 2000);
+  } catch (err) {
+    showLoginError(err.message);
+    console.error('Signup failed:', err);
+  } finally {
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
+};
+
+// ============================================================================
+// LOGOUT FUNCTION
+// ============================================================================
+
+window.doLogout = async function() {
+  try {
+    await signOutUser();
+
+    // Clear local state
+    currentUser = null;
+    currentUserId = null;
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('currentUserId');
+
+    // Clear all app state
+    window.currentProjectId = null;
+    window.rows = [];
+    window.incidents = [];
+    window.fileTexts = [];
+    window.fileNames = [];
+
+    // Show login screen
+    showScreen('screenLogin');
+
+    // Clear form
+    document.getElementById('loginEmail').value = '';
+    document.getElementById('loginPass').value = '';
+    clearLoginErrors();
+
+  } catch (err) {
+    console.error('Logout failed:', err);
+    alert('Error logging out: ' + err.message);
+  }
+};
+
+// ============================================================================
+// SESSION MANAGEMENT
+// ============================================================================
+
+window.checkAuthSession = async function() {
+  try {
+    var user = await getCurrentUser();
+
+    if (user) {
+      currentUser = user.email;
+      currentUserId = user.id;
+      localStorage.setItem('currentUser', user.email);
+      localStorage.setItem('currentUserId', user.id);
+
+      // Update UI
+      document.getElementById('dashUserLabel').textContent = '👤 ' + user.email;
+      document.getElementById('workUserLabel').textContent = '👤 ' + user.email;
+
+      // User is logged in, show dashboard
+      loadDashboard();
+      showScreen('screenDash');
+      return true;
+    } else {
+      // User not logged in, show login screen
+      currentUser = null;
+      currentUserId = null;
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('currentUserId');
+
+      showScreen('screenLogin');
+      return false;
+    }
+  } catch (err) {
+    console.error('Session check failed:', err);
+    showScreen('screenLogin');
+    return false;
+  }
+};
+
+// ============================================================================
+// INITIALIZE AUTH ON PAGE LOAD
+// ============================================================================
+
+// Check if user is already logged in
+window.addEventListener('DOMContentLoaded', async function() {
+  // Initialize version display (from utils.js)
+  if (typeof initVersionDisplay === 'function') {
+    initVersionDisplay();
+  }
+
+  // Check auth session
+  await checkAuthSession();
+
+  // Set up auth state listener
+  onAuthStateChanged(async function(event, session) {
+    console.log('Auth event:', event);
+
+    if (event === 'SIGNED_IN') {
+      // User just signed in
+      await checkAuthSession();
+    } else if (event === 'SIGNED_OUT') {
+      // User just signed out
+      currentUser = null;
+      currentUserId = null;
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('currentUserId');
+      showScreen('screenLogin');
+    } else if (event === 'TOKEN_REFRESHED') {
+      // Token was refreshed, update session
+      if (session) {
+        currentUser = session.user.email;
+        currentUserId = session.user.id;
+      }
+    }
+  });
+});

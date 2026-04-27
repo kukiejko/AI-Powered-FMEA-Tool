@@ -146,8 +146,10 @@ window.openProjectSettings = async function() {
   if (apiField) apiField.value = getApiKey();
 
   // Load saved Groq model and max_tokens if applicable
-  var groqModel = localStorage.getItem('groqModel:' + (currentUser || '')) || '';
-  var groqMaxTokens = localStorage.getItem('groqMaxTokens:' + (currentUser || '')) || '8192';
+  var groqModelResult = await Storage.get('groqModel:' + (currentUser || ''));
+  var groqMaxTokensResult = await Storage.get('groqMaxTokens:' + (currentUser || ''));
+  var groqModel = groqModelResult ? groqModelResult.value : '';
+  var groqMaxTokens = groqMaxTokensResult ? groqMaxTokensResult.value : '8192';
   var modelSel = document.getElementById('groqModelSelect');
   var tokensSel = document.getElementById('groqMaxTokens');
   if (modelSel && groqModel) {
@@ -204,12 +206,12 @@ window.saveProjSettings = async function() {
   var modelSel = document.getElementById('groqModelSelect');
   var tokensSel = document.getElementById('groqMaxTokens');
   if (modelSel && modelSel.value) {
-    localStorage.setItem('groqModel:' + (currentUser || ''), modelSel.value);
+    await Storage.set('groqModel:' + (currentUser || ''), modelSel.value);
   }
   if (tokensSel && tokensSel.value) {
     var tokens = parseInt(tokensSel.value);
     if (tokens > 0 && tokens <= 8192) {
-      localStorage.setItem('groqMaxTokens:' + (currentUser || ''), String(tokens));
+      await Storage.set('groqMaxTokens:' + (currentUser || ''), String(tokens));
     }
   }
 
