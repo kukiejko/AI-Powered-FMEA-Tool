@@ -4,7 +4,7 @@
 
 // Supabase Project Configuration
 var SUPABASE_URL = 'https://eyzbfylsbicoeoszcxfs.supabase.co';
-var SUPABASE_KEY = 'sb_publishable_dbjWjVoJnaCCO2qdqjvaDA_iSTriMEb';
+var SUPABASE_KEY = 'sb_publishable_O0rVrSLmUaV9Qg0ZcyRzEA_uRp2dNhN';
 
 // Capture the Supabase library BEFORE our var declaration shadows window.supabase
 var _supabaseLib = window.supabase;
