@@ -105,14 +105,42 @@ window.goToDashboard = function () {
 
 async function autoSave() {
   if (!currentProjectId) return;
-  var proj = await getProject(currentProjectId);
-  if (!proj) return;
-  proj.hiddenCols = hiddenCols;
-  proj.rows = rows.map(function(r){ return { id:r.id, step:r.step, failureMode:r.failureMode, effect:r.effect, cause:r.cause, sev:r.sev, occ:r.occ, det:r.det, action:r.action, owner:r.owner, dueDate:r.dueDate, pctComplete:r.pctComplete, currPC:r.currPC, currDC:r.currDC, prevAction:r.prevAction, detAction:r.detAction, actionStatus:r.actionStatus, rsev:r.rsev, rocc:r.rocc, rdet:r.rdet, sourceFile:r.sourceFile, sourcePage:r.sourcePage, comment:r.comment, _rowH:r._rowH }; });
-  await saveProject(proj);
   var el = document.getElementById('bannerSave');
-  el.textContent = '✓ Saved ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-  setTimeout(function(){ if(el.textContent.startsWith('✓')) el.textContent = ''; }, 3000);
+  var localRowCount = rows.length;
+
+  try {
+    var proj = await getProject(currentProjectId);
+    if (!proj) { setSaveStatus('❌ Save failed: project not found', true); return; }
+
+    proj.hiddenCols = hiddenCols;
+    proj.rows = rows.map(function(r){ return { id:r.id, step:r.step, failureMode:r.failureMode, effect:r.effect, cause:r.cause, sev:r.sev, occ:r.occ, det:r.det, action:r.action, owner:r.owner, dueDate:r.dueDate, pctComplete:r.pctComplete, currPC:r.currPC, currDC:r.currDC, prevAction:r.prevAction, detAction:r.detAction, actionStatus:r.actionStatus, rsev:r.rsev, rocc:r.rocc, rdet:r.rdet, sourceFile:r.sourceFile, sourcePage:r.sourcePage, comment:r.comment, _rowH:r._rowH }; });
+
+    await saveProject(proj);
+
+    // Verify: read back from Supabase and check row count matches
+    var verified = await getProject(currentProjectId);
+    var savedCount = verified && verified.rows ? verified.rows.length : -1;
+
+    if (savedCount === localRowCount) {
+      setSaveStatus('✅ Saved & verified — ' + localRowCount + ' rows in DB', false);
+    } else {
+      setSaveStatus('⚠️ Save mismatch: local=' + localRowCount + ' DB=' + savedCount + '. Check Supabase column (see console).', true);
+      console.error('[autoSave] Row count mismatch. Local:', localRowCount, 'DB:', savedCount, 'Full verified:', verified);
+    }
+  } catch(e) {
+    setSaveStatus('❌ Save error: ' + e.message, true);
+    console.error('[autoSave] Error:', e);
+  }
+}
+
+function setSaveStatus(msg, isError) {
+  var el = document.getElementById('bannerSave');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = isError ? '#e53e3e' : '#276749';
+  if (!isError) {
+    setTimeout(function(){ if (el.textContent === msg) { el.textContent = ''; el.style.color = ''; } }, 4000);
+  }
 }
 function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(autoSave, 800); }
 
