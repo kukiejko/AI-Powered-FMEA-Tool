@@ -65,9 +65,9 @@ document.addEventListener('DOMContentLoaded', function() {
   dropZone.addEventListener('drop', function(e){ e.preventDefault(); dropZone.classList.remove('drag'); handleFiles(e.dataTransfer.files); });
   fileInput.addEventListener('change', function(){ handleFiles(fileInput.files); });
 
-  // ── Document size control initialization ──
-  if (typeof updateDocSizeDisplay === 'function') {
-    updateDocSizeDisplay();
+  // ── Document range control initialization ──
+  if (typeof _docApply === 'function') {
+    _docApply(0);
   }
 
   // ── Column/row resize mouse handlers ──
@@ -168,169 +168,93 @@ function renderFileList(){
   document.getElementById('fileList').innerHTML = fileNames.map(function(n,i){
     return '<div class="file-chip">📄 '+esc(n)+'<button onclick="removeFile('+i+')">×</button></div>';
   }).join('');
-  updateCostEstimator();
+  if (typeof _docApply === 'function') _docApply(0);
+  else updateCostEstimator();
 }
-window.removeFile = function(i){ fileTexts.splice(i,1); fileNames.splice(i,1); renderFileList(); };
+window.removeFile = function(i){ fileTexts.splice(i,1); fileNames.splice(i,1); renderFileList(); if (typeof _docApply === 'function') _docApply(0); };
 
 // ── Document size control ──
 // ── Document Range Control ──
-var _rangeMax = 150000; // current slider maximum (set by "Max range" input)
-
-window.getDocumentSizeLimit = function() {
-  var end = parseInt((document.getElementById('docEndChar') || {}).value) || 150000;
-  var start = parseInt((document.getElementById('docStartChar') || {}).value) || 0;
-  return Math.max(1000, end - start);
-};
 
 window.getDocumentStartChar = function() {
-  var input = document.getElementById('docStartChar');
-  return input ? Math.max(0, parseInt(input.value) || 0) : 0;
+  var el = document.getElementById('docStartChar');
+  return el ? Math.max(0, parseInt(el.value) || 0) : 0;
+};
+
+window.getDocumentSizeLimit = function() {
+  var winEl = document.getElementById('docWindowSize');
+  return winEl ? Math.max(1000, parseInt(winEl.value) || 20000) : 20000;
 };
 
 window.getAnalysisRange = function() {
   var content = getContent();
-  var start = getDocumentStartChar();
-  var end = Math.min(content.length, parseInt((document.getElementById('docEndChar') || {}).value) || 150000);
-  start = Math.min(start, content.length);
-  end = Math.max(start + 1, end);
+  var start   = Math.min(getDocumentStartChar(), content.length);
+  var end     = Math.min(content.length, start + getDocumentSizeLimit());
   return { start: start, end: end, total: content.length, text: content.substring(start, end) };
 };
 
-function _getRangeMax() {
-  var el = document.getElementById('docMaxRange');
-  return el ? Math.max(1000, Math.min(150000, parseInt(el.value) || 150000)) : 150000;
-}
+function _docApply(start) {
+  var content = getContent();
+  var total   = content.length;
+  var winSize = getDocumentSizeLimit();
+  var sliderMax = Math.max(winSize, total);
 
-function _updateSliderVisuals() {
-  var startEl = document.getElementById('docStartSlider');
-  var endEl   = document.getElementById('docEndSlider');
-  var bar     = document.getElementById('rangeBar');
-  var win     = document.getElementById('rangeWindow');
-  var startLbl= document.getElementById('rangeStartLabel');
-  var endLbl  = document.getElementById('rangeEndLabel');
-  var midLbl  = document.getElementById('rangeMidLabel');
-  if (!startEl || !endEl || !bar) return;
+  start = Math.max(0, Math.min(start, Math.max(0, sliderMax - winSize)));
+  var end = Math.min(total, start + winSize);
 
-  var max   = _getRangeMax();
-  var start = Math.max(0, Math.min(max, parseInt(startEl.value) || 0));
-  var end   = Math.max(start + 1000, Math.min(max, parseInt(endEl.value) || max));
+  // update hidden compat inputs
+  var startEl = document.getElementById('docStartChar');
+  var endEl   = document.getElementById('docEndChar');
+  if (startEl) startEl.value = start;
+  if (endEl)   endEl.value   = end;
 
-  var pStart = start / max * 100;
-  var pEnd   = end   / max * 100;
+  // update slider
+  var slider = document.getElementById('docStartSlider');
+  if (slider) { slider.max = sliderMax; slider.value = start; }
 
-  bar.style.left  = pStart + '%';
-  bar.style.width = (pEnd - pStart) + '%';
+  // update visuals
+  var bar = document.getElementById('rangeBar');
+  var win = document.getElementById('rangeWindow');
+  var pStart = sliderMax > 0 ? (start / sliderMax * 100) : 0;
+  var pEnd   = sliderMax > 0 ? (end   / sliderMax * 100) : 100;
+  if (bar) { bar.style.left = pStart + '%'; bar.style.width = (pEnd - pStart) + '%'; }
   if (win) { win.style.left = pStart + '%'; win.style.width = (pEnd - pStart) + '%'; }
 
+  var startLbl = document.getElementById('rangeStartLabel');
+  var endLbl   = document.getElementById('rangeEndLabel');
+  var midLbl   = document.getElementById('rangeMidLabel');
   if (startLbl) startLbl.textContent = start.toLocaleString();
-  if (endLbl)   endLbl.textContent   = end.toLocaleString();
-  if (midLbl)   midLbl.textContent   = Math.round((start + end) / 2).toLocaleString();
-}
+  if (endLbl)   endLbl.textContent   = total.toLocaleString();
+  if (midLbl)   midLbl.textContent   = end.toLocaleString() + ' ▶';
 
-function _applyRange(start, end) {
-  var max = _getRangeMax();
-  start = Math.max(0, Math.min(max - 1000, start));
-  end   = Math.max(start + 1000, Math.min(max, end));
+  // token estimate
+  var tokEl = document.getElementById('docWindowTokens');
+  if (tokEl) tokEl.textContent = Math.round(winSize / 4).toLocaleString() + ' tokens';
 
-  var startSlider = document.getElementById('docStartSlider');
-  var endSlider   = document.getElementById('docEndSlider');
-  var startInput  = document.getElementById('docStartChar');
-  var endInput    = document.getElementById('docEndChar');
-  var winSizeEl   = document.getElementById('docWindowSize');
-
-  if (startSlider) startSlider.value = start;
-  if (endSlider)   endSlider.value   = end;
-  if (startInput)  startInput.value  = start;
-  if (endInput)    endInput.value    = end;
-  if (winSizeEl)   winSizeEl.value   = end - start;
-
-  // keep legacy hidden inputs in sync
-  var legacySize  = document.getElementById('docSizeInput');
-  if (legacySize) legacySize.value = end - start;
-
-  _updateSliderVisuals();
   window.updateDocSizeDisplay();
 }
 
 window.onStartSlider = function() {
-  var startEl = document.getElementById('docStartSlider');
-  var endEl   = document.getElementById('docEndSlider');
-  var winEl   = document.getElementById('docWindowSize');
-  var start   = parseInt(startEl.value) || 0;
-  var winSize = parseInt((winEl || {}).value) || 150000;
-  _applyRange(start, start + winSize);
-};
-
-window.onEndSlider = function() {
-  var startEl = document.getElementById('docStartSlider');
-  var endEl   = document.getElementById('docEndSlider');
-  var winEl   = document.getElementById('docWindowSize');
-  var end     = parseInt(endEl.value) || _getRangeMax();
-  var winSize = parseInt((winEl || {}).value) || 150000;
-  _applyRange(end - winSize, end);
-};
-
-window.onStartInput = function() {
-  var startInput = document.getElementById('docStartChar');
-  var endInput   = document.getElementById('docEndChar');
-  var start = Math.max(0, parseInt(startInput.value) || 0);
-  var end   = parseInt(endInput.value) || _getRangeMax();
-  if (end <= start) end = start + 1000;
-  _applyRange(start, end);
-};
-
-window.onEndInput = function() {
-  var startInput = document.getElementById('docStartChar');
-  var endInput   = document.getElementById('docEndChar');
-  var start = Math.max(0, parseInt(startInput.value) || 0);
-  var end   = parseInt(endInput.value) || _getRangeMax();
-  _applyRange(start, end);
+  var slider = document.getElementById('docStartSlider');
+  _docApply(parseInt(slider.value) || 0);
 };
 
 window.onWindowSizeInput = function() {
-  var winEl   = document.getElementById('docWindowSize');
-  var startEl = document.getElementById('docStartChar');
-  var winSize = Math.max(1000, parseInt(winEl.value) || 1000);
-  var start   = parseInt(startEl.value) || 0;
-  _applyRange(start, start + winSize);
-};
-
-window.clampDocMaxRange = function() {
-  var maxEl = document.getElementById('docMaxRange');
-  var max   = Math.max(1000, Math.min(150000, parseInt(maxEl.value) || 150000));
-  maxEl.value = max;
-  _rangeMax = max;
-
-  // Update all slider maxes
-  ['docStartSlider','docEndSlider'].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el) el.max = max;
-  });
-
-  // Clamp current range to new max
-  var startEl = document.getElementById('docStartChar');
-  var endEl   = document.getElementById('docEndChar');
-  var start   = Math.min(parseInt(startEl.value) || 0, max - 1000);
-  var end     = Math.min(parseInt(endEl.value)   || max, max);
-  _applyRange(start, end);
+  var start = getDocumentStartChar();
+  _docApply(start);
 };
 
 window.resetDocRange = function() {
-  var maxEl = document.getElementById('docMaxRange');
-  if (maxEl) maxEl.value = 150000;
-  _rangeMax = 150000;
-  ['docStartSlider','docEndSlider'].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el) el.max = 150000;
-  });
-  _applyRange(0, 150000);
+  var winEl = document.getElementById('docWindowSize');
+  if (winEl) winEl.value = 20000;
+  _docApply(0);
 };
 
 window.updateDocSizeDisplay = function() {
-  var info     = document.getElementById('docSizeInfo');
-  var warning  = document.getElementById('docSizeWarning');
-  var rangeInfo= document.getElementById('docRangeInfo');
-  var range    = getAnalysisRange();
+  var info      = document.getElementById('docSizeInfo');
+  var warning   = document.getElementById('docSizeWarning');
+  var rangeInfo = document.getElementById('docRangeInfo');
+  var range     = getAnalysisRange();
   var willTruncate = range.end < range.total;
 
   if (info) info.textContent = 'Total: ' + range.total.toLocaleString() + ' | Analyzing: ' + range.text.length.toLocaleString();
@@ -340,36 +264,31 @@ window.updateDocSizeDisplay = function() {
   updateCostEstimator();
 };
 
-// drag the range window as a block
+// drag the window bar to scroll
 (function() {
-  var _dragging = false, _dragStartX = 0, _dragStartVal = 0, _dragWindowSize = 0;
-
+  var _drag = false, _dragX0 = 0, _dragStart0 = 0;
   document.addEventListener('DOMContentLoaded', function() {
     var win = document.getElementById('rangeWindow');
     if (!win) return;
-
     win.addEventListener('mousedown', function(e) {
       e.preventDefault();
-      _dragging = true;
-      _dragStartX = e.clientX;
-      _dragStartVal = parseInt(document.getElementById('docStartChar').value) || 0;
-      _dragWindowSize = (parseInt(document.getElementById('docEndChar').value) || 150000) - _dragStartVal;
+      _drag = true;
+      _dragX0 = e.clientX;
+      _dragStart0 = getDocumentStartChar();
       win.style.cursor = 'grabbing';
     });
-
     document.addEventListener('mousemove', function(e) {
-      if (!_dragging) return;
+      if (!_drag) return;
       var track = document.getElementById('rangeTrackWrap');
       if (!track) return;
-      var max  = _getRangeMax();
-      var rect = track.getBoundingClientRect();
-      var dx   = e.clientX - _dragStartX;
-      var dVal = Math.round((dx / rect.width) * max / 1000) * 1000;
-      _applyRange(_dragStartVal + dVal, _dragStartVal + dVal + _dragWindowSize);
+      var content = getContent();
+      var sliderMax = Math.max(getDocumentSizeLimit(), content.length);
+      var rect  = track.getBoundingClientRect();
+      var dVal  = Math.round(((e.clientX - _dragX0) / rect.width) * sliderMax / 500) * 500;
+      _docApply(_dragStart0 + dVal);
     });
-
     document.addEventListener('mouseup', function() {
-      if (_dragging) { _dragging = false; var win2 = document.getElementById('rangeWindow'); if (win2) win2.style.cursor = 'grab'; }
+      if (_drag) { _drag = false; var w = document.getElementById('rangeWindow'); if (w) w.style.cursor = 'grab'; }
     });
   });
 })();

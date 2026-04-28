@@ -174,61 +174,43 @@
               <span id="docSizeInfo" style="font-size:0.75rem;color:#718096"></span>
             </div>
 
-            <!-- Max range cap row -->
+            <!-- Window size -->
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-              <label style="font-size:0.73rem;color:#4a5568;white-space:nowrap">Max range:</label>
-              <input type="number" id="docMaxRange" min="1000" max="150000" step="1000" value="150000"
-                style="width:90px;padding:4px 6px;border:1px solid #cbd5e0;border-radius:4px;font-size:0.82rem"
-                oninput="clampDocMaxRange()">
-              <span style="font-size:0.73rem;color:#718096">chars &nbsp;|&nbsp; Window size:</span>
-              <input type="number" id="docWindowSize" min="1000" max="150000" step="1000" value="150000"
+              <label style="font-size:0.73rem;color:#4a5568;white-space:nowrap">Window size:</label>
+              <input type="number" id="docWindowSize" min="1000" max="600000" step="1000" value="20000"
                 style="width:90px;padding:4px 6px;border:1px solid #cbd5e0;border-radius:4px;font-size:0.82rem"
                 oninput="onWindowSizeInput()">
-              <span style="font-size:0.73rem;color:#718096">chars</span>
+              <span style="font-size:0.73rem;color:#718096">chars &nbsp;≈&nbsp;</span>
+              <span id="docWindowTokens" style="font-size:0.73rem;color:#4a5568;font-weight:600">5,000 tokens</span>
               <button onclick="resetDocRange()" style="margin-left:auto;padding:3px 10px;border:1px solid #cbd5e0;border-radius:4px;background:#fff;font-size:0.73rem;cursor:pointer;color:#4a5568">Reset</button>
             </div>
 
-            <!-- Dual-handle range slider -->
-            <div style="margin-bottom:6px">
+            <!-- Slider -->
+            <div style="margin-bottom:4px">
               <div id="rangeTrackWrap" style="position:relative;height:32px;margin:0 4px">
-                <!-- filled bar -->
-                <div id="rangeBar" style="position:absolute;top:13px;height:6px;background:#4299e1;border-radius:3px;pointer-events:none;z-index:1"></div>
-                <!-- drag handle for moving the whole window -->
-                <div id="rangeWindow" style="position:absolute;top:10px;height:12px;background:rgba(66,153,225,0.18);border:1px solid #4299e1;border-radius:3px;cursor:grab;z-index:2" title="Drag to move range window"></div>
-                <input type="range" id="docStartSlider" min="0" max="150000" step="1000" value="0"
-                  style="position:absolute;width:100%;top:0;left:0;margin:0;opacity:0;height:32px;cursor:pointer;z-index:4"
-                  oninput="onStartSlider()">
-                <input type="range" id="docEndSlider" min="1000" max="150000" step="1000" value="150000"
+                <div style="position:absolute;top:13px;left:0;right:0;height:6px;background:#e2e8f0;border-radius:3px"></div>
+                <div id="rangeBar" style="position:absolute;top:13px;height:6px;background:#4299e1;border-radius:3px;pointer-events:none"></div>
+                <div id="rangeWindow" style="position:absolute;top:8px;height:16px;background:rgba(66,153,225,0.15);border:2px solid #4299e1;border-radius:4px;cursor:grab" title="Drag to scroll through document"></div>
+                <input type="range" id="docStartSlider" min="0" max="150000" step="500" value="0"
                   style="position:absolute;width:100%;top:0;left:0;margin:0;opacity:0;height:32px;cursor:pointer;z-index:3"
-                  oninput="onEndSlider()">
+                  oninput="onStartSlider()">
               </div>
               <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:#a0aec0;margin-top:2px">
                 <span id="rangeStartLabel">0</span>
-                <span id="rangeMidLabel"></span>
-                <span id="rangeEndLabel">150,000</span>
+                <span id="rangeMidLabel" style="text-align:center"></span>
+                <span id="rangeEndLabel">—</span>
               </div>
             </div>
 
-            <!-- Numeric inputs for start/end -->
-            <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
-              <label style="font-size:0.73rem;color:#4a5568;white-space:nowrap">Start:</label>
-              <input type="number" id="docStartChar" min="0" value="0"
-                style="width:90px;padding:4px 6px;border:1px solid #cbd5e0;border-radius:4px;font-size:0.82rem"
-                oninput="onStartInput()">
-              <label style="font-size:0.73rem;color:#4a5568;white-space:nowrap">End:</label>
-              <input type="number" id="docEndChar" min="1000" value="150000"
-                style="width:90px;padding:4px 6px;border:1px solid #cbd5e0;border-radius:4px;font-size:0.82rem"
-                oninput="onEndInput()">
-              <span style="font-size:0.73rem;color:#718096">chars</span>
-            </div>
-
-            <!-- hidden legacy inputs kept for backward compat -->
-            <input type="hidden" id="docSizeSlider" value="150000">
-            <input type="hidden" id="docSizeInput" value="150000">
+            <!-- hidden compat inputs -->
+            <input type="hidden" id="docStartChar" value="0">
+            <input type="hidden" id="docEndChar" value="20000">
+            <input type="hidden" id="docSizeSlider" value="20000">
+            <input type="hidden" id="docSizeInput" value="20000">
 
             <div style="font-size:0.72rem;color:#4a5568;line-height:1.4">
               <div id="docRangeInfo" style="background:#fff;border:1px solid #cbd5e0;border-radius:4px;padding:6px 8px;margin-bottom:4px;font-family:monospace;font-size:0.7rem;color:#2d3748"></div>
-              <div id="docSizeWarning" style="display:none;color:#c05621;margin-bottom:4px">⚠️ Document exceeds range. Only characters in the specified range will be analyzed.</div>
+              <div id="docSizeWarning" style="display:none;color:#c05621;margin-bottom:4px">⚠️ Document exceeds window. Only the selected range will be analyzed.</div>
             </div>
           </div>
 
