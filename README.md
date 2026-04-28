@@ -1,140 +1,134 @@
-# FMEA Tool - AI-Powered FMEA Generator
+# AI-Powered FMEA Tool
 
-An intelligent, modular web-based tool for generating FMEA (Failure Mode and Effects Analysis) worksheets using AI. Supports multiple AI providers (Claude, Gemini, Groq, Ollama) and provides comprehensive incident tracking, analysis, and reporting.
+An intelligent, modular web-based tool for generating FMEA (Failure Mode and Effects Analysis) worksheets using AI. Supports multiple AI providers (Claude, Gemini, Groq, Ollama), cloud storage via Supabase, and multi-user authentication.
 
-**Version:** 1.1.1 | **Built:** 04/27/2026 18:47:42 UTC
+**Version:** 1.2.0 | **Built:** 04/28/2026 08:06:52 UTC
+
+---
+
+## What's New in 1.2.0
+
+- **Supabase cloud storage** — projects, incidents, and API keys persist across devices and browser clears
+- **Multi-user authentication** — email/password signup and login via Supabase Auth
+- **Google SSO** — sign in with your Google account
+- **Groq TPM limits** — model dropdown shows tokens-per-minute limit and safe document window per model
+- **Simplified document range control** — single window-size input with draggable slider spanning the full document
+- **Active model badge** — shows currently selected provider and model next to the Analyze button
+- **Groq set as default provider** — fastest free-tier option pre-selected
+- **Default model: llama-3.1-8b-instant**
+
+---
 
 ## Features
 
 ### 🤖 Multi-Provider AI Support
-- **Claude (Anthropic)** - Full-featured FMEA analysis with advanced capabilities
-- **Gemini (Google)** - Cost-effective alternative ($1.25/M input, $5/M output)
-- **Groq** - Ultra-fast free tier with large language models
-- **Ollama** - Run models locally on your machine (completely free)
+- **Groq** *(default)* — ultra-fast free tier; models sorted by TPM limit with safe window shown
+- **Claude (Anthropic)** — advanced FMEA analysis
+- **Gemini (Google)** — cost-effective alternative
+- **Ollama** — run models locally, completely free
+
+### 🔐 Authentication & Cloud Storage
+- Email/password signup and login (Supabase Auth)
+- **Google SSO** — one-click sign-in
+- All projects, incidents, and settings stored in Supabase (survive browser clears)
+- API keys encrypted at rest in cloud database
+- Row Level Security — each user sees only their own data
 
 ### 📄 Document Analysis
 - Upload TXT/PDF files or paste document text
-- **Document range control**: Skip first N characters, analyze custom portions
-- Intelligent document chunking to prevent token limit errors
+- **Document range control**: window-size input + draggable slider to scroll through any part of the document
+- Per-model TPM limit display: know the safe window size before you hit an error
 - Real-time token cost estimation
 
 ### 📋 FMEA Worksheet
-- Comprehensive failure mode tracking with:
-  - Process Step, Failure Mode, Effect, Cause
-  - Severity (S), Occurrence (O), Detection (D) ratings (1-10)
-  - RPN (Risk Priority Number) calculation
-  - Action Priority (AP) badge (AIAG/VDA standard)
-  - Recommended actions, owners, due dates
-  - Status tracking and completion percentage
-- **Two view modes:**
-  - **Simplified**: Essential fields for quick analysis
-  - **Advanced**: Full FMEA methodology with revised ratings, prevention/detection controls
+- Process Step, Failure Mode, Effect, Cause
+- Severity (S), Occurrence (O), Detection (D) ratings (1-10)
+- RPN (Risk Priority Number) auto-calculation
+- Action Priority (AP) badge — AIAG/VDA standard (H / M / L)
+- Recommended actions, owners, due dates, completion %
+- **Two view modes:** Simplified and Advanced (with revised ratings, prevention/detection controls)
+- Hide/show Cause and Action columns
 
 ### ⚠️ Incident Tracking
 - Log incidents linked to FMEA failure modes
-- File attachments support
+- File attachments
 - Incident reports and CSV export
-- Track implementation progress
 
 ### 📊 Reporting & Export
-- **Project Reports**: PDF export with FMEA data and metrics
-- **All Projects Report**: Compare across multiple FMEAs
-- **CSV Export**: Import to Excel or other tools
-- **JSON Import/Export**: Backup and version control
-- **RPN Donut Chart**: Visual risk distribution
-- **KPI Dashboard**: Key metrics at a glance
+- **PDF report** — project summary with FMEA table and KPIs
+- **All Projects Report** — cross-project comparison
+- **CSV Export** — open in Excel
+- **JSON Import/Export** — full backup and restore
+- **RPN Donut Chart** — visual risk distribution
 
-### 🔐 Security & Storage
-- **Local browser storage**: All data stored on your device, never sent to servers
-- **Per-user credentials**: Each user has separate API keys and projects
-- **No account system**: Use simple username/password (default: admin/fmea2024)
-- **Offline-capable**: Works without internet after initial setup
+---
 
 ## Quick Start
 
 ### 1. Open the Tool
-```
-Open index.html in your web browser
-```
+Open `index.html` in your browser (or serve via a local web server).
 
-### 2. Log In
-```
-Username: admin
-Password: fmea2024
-```
+### 2. Create an Account
+- Click **Don't have an account? Sign up**
+- Enter your email and password, confirm your email, then sign in
+- Or use **Sign in with Google**
 
 ### 3. Create a Project
-- Click "New Project" on the dashboard
+- Click **New Project** on the dashboard
 - Enter project details (name, company, scope, etc.)
-- Save and open the project
+- Open Settings (⚙) to choose AI provider and paste API key
 
 ### 4. Upload Documents & Analyze
-- Upload TXT files or paste document text
-- (Optional) Adjust document range if needed
-- Select your AI provider in ⚙ Header settings
-- Enter API key for chosen provider
-- Click "🔍 Analyze & Generate FMEA"
+- Upload a TXT/PDF or paste text in the Upload tab
+- Adjust **Window size** in the Range Control if needed (default 20,000 chars ≈ 5,000 tokens)
+- Drag the slider to choose which part of the document to analyze
+- Click **🔍 Analyze & Generate FMEA**
 - Review and accept generated failure modes
 
-### 5. Add Actions & Track Progress
-- Fill in recommended actions
-- Assign owners and due dates
-- Update completion percentage
+### 5. Add Actions & Export
+- Fill in recommended actions, owners, due dates
 - Export as PDF or CSV when ready
 
-## Configuration
+---
 
-### AI Provider Setup
+## AI Provider Setup
 
-#### Claude (Anthropic)
-1. Get free $5 credits at [console.anthropic.com](https://console.anthropic.com)
-2. Create an API key
-3. Enter in Project Settings (⚙)
-4. Cost: ~$3/1M input tokens, $15/1M output tokens
+### Groq *(recommended — free)*
+1. Get a free API key at [console.groq.com](https://console.groq.com)
+2. Open Project Settings (⚙) → enter key → **Load Models**
+3. Models are sorted by TPM limit (highest first); each shows safe window size
+4. Best free-tier models for large documents: **gemma2-9b-it** / **gemma-7b-it** (15,000 TPM → ~56k chars)
 
-#### Gemini (Google)
+### Claude (Anthropic)
+1. Get credits at [console.anthropic.com](https://console.anthropic.com)
+2. Enter API key in Project Settings
+3. Cost: ~$3/1M input, $15/1M output tokens
+
+### Gemini (Google)
 1. Get free $300 credits at [console.cloud.google.com](https://console.cloud.google.com)
-2. Enable Generative AI API
-3. Create an API key
-4. Enter in Project Settings (⚙)
-5. Cost: ~$1.25/1M input, $5/1M output tokens
+2. Enable Generative AI API, create an API key
+3. Cost: ~$1.25/1M input, $5/1M output tokens
 
-#### Groq
-1. Get free API key at [console.groq.com](https://console.groq.com)
-2. Enter in Project Settings (⚙)
-3. Click "Refresh" to load available models
-4. Select preferred model
-5. Adjust "Max Output Tokens" if needed (default: 8192)
-6. Cost: Free tier available
+### Ollama *(local, free)*
+1. Download from [ollama.ai](https://ollama.ai) and run `ollama serve`
+2. Pull a model: `ollama pull mistral`
+3. Select Ollama in Settings, enter model name
 
-#### Ollama (Local)
-1. Download from [ollama.ai](https://ollama.ai)
-2. Run: `ollama serve`
-3. Pull a model: `ollama pull mistral`
-4. In Project Settings, select Ollama
-5. Enter model name (e.g., "mistral")
-6. Cost: Completely free (runs on your machine)
+---
 
-### Build System
+## Groq TPM Limits (Free Tier)
 
-Automatic version bumping and timestamp updates:
+| Model | TPM Limit | Safe Window |
+|---|---|---|
+| gemma2-9b-it | 15,000 | ~56k chars |
+| gemma-7b-it | 15,000 | ~56k chars |
+| llama-3.2-1b-preview | 7,000 | ~24k chars |
+| llama-3.2-3b-preview | 7,000 | ~24k chars |
+| llama-3.1-8b-instant | 6,000 | ~20k chars |
+| llama-3.3-70b-versatile | 6,000 | ~20k chars |
+| mixtral-8x7b-32768 | 5,000 | ~16k chars |
 
-**Windows (PowerShell):**
-```powershell
-.\build.ps1 -Type patch    # or minor/major
-```
-
-**Cross-Platform (Node.js):**
-```bash
-node build.js patch        # or minor/major
-```
-
-**What it does:**
-- Increments version (patch/minor/major)
-- Updates compilation timestamp to current UTC
-- Updates display on login screen
-
-See [BUILD_INSTRUCTIONS.md](BUILD_INSTRUCTIONS.md) for git integration options.
+---
 
 ## File Structure
 
@@ -142,137 +136,51 @@ See [BUILD_INSTRUCTIONS.md](BUILD_INSTRUCTIONS.md) for git integration options.
 ./
 ├── index.html              # Main HTML shell
 ├── css/
-│   └── styles.css          # All styling (425 lines)
+│   └── styles.css          # All styling
 ├── js/
-│   ├── utils.js            # Shared utilities, storage, UI helpers
-│   ├── auth.js             # Login, logout, provider selection
-│   ├── projects.js         # Project management, settings, API testing
-│   ├── table.js            # FMEA table rendering, row/column ops, file handling
+│   ├── supabase.js         # Supabase client, auth helpers, encryption
+│   ├── utils.js            # Shared state, storage abstraction, helpers
+│   ├── auth.js             # Login, signup, Google SSO, session management
+│   ├── projects.js         # Project CRUD, settings, Groq model/TPM info
+│   ├── table.js            # FMEA table rendering, range control, file handling
 │   ├── analyze.js          # AI analysis, cost estimation, multi-provider support
 │   ├── incidents.js        # Incident logging, linking, export
 │   ├── reports.js          # PDF/CSV generation, KPIs
 │   └── export.js           # JSON export/import
-├── build.js                # Node.js build script (auto-versioning)
-├── build.ps1               # PowerShell build script
-├── README.md               # This file
-├── BUILD_INSTRUCTIONS.md   # Build system documentation
-└── FMEA_TOOL_MODULARIZATION_HANDOFF_2_FINAL.md  # Architecture documentation
+├── supabase-schema.sql     # Database schema and RLS policies
+└── README.md               # This file
 ```
+
+---
 
 ## Technology Stack
 
-- **Frontend**: Vanilla JavaScript (ES5-compatible, no frameworks)
-- **Storage**: Browser localStorage (per-user, per-browser)
+- **Frontend**: Vanilla JavaScript (ES5-compatible, no frameworks, no build step)
+- **Auth & Storage**: Supabase (PostgreSQL + Row Level Security)
+- **AI APIs**: Groq, Anthropic, Google Generative AI, Ollama
 - **Export**: HTML/Canvas (PDF), CSV, JSON
-- **AI APIs**: Anthropic, Google Generative AI, Groq, Ollama
-- **Architecture**: Modular, 10 separate files, no build tool required
 
-## Key Concepts
-
-### Storage Abstraction
-Supports both:
-- **Browser localStorage** (default, standalone use)
-- **Custom storage** via `window.storage` (Claude.ai integration)
-
-### Multi-Provider Analysis
-Each provider has different:
-- API endpoints and request formats
-- Response parsing
-- Token limits and pricing
-- Configuration requirements
-
-The tool auto-detects and adapts to each provider.
-
-### AIAG/VDA Action Priority (AP)
-Standard risk assessment methodology:
-- **H (High)**: Severity ≥9, or S≥7×O≥4, or S≥5×O≥7
-- **M (Medium)**: Severity ≥5, specific threshold combinations
-- **L (Low)**: Everything else
+---
 
 ## Troubleshooting
 
-### "API Error: Request Entity Too Large"
-- **Cause**: Document too large for provider
-- **Fix**: Reduce "Maximum characters" slider in upload panel
-  - Try 50,000 or lower for Groq
-  - Try 30,000 for Gemini
+### "Document too large for this model's free-tier TPM limit"
+- Reduce **Window size** in the Range Control (try 16,000 chars)
+- Or switch to **gemma2-9b-it** (15,000 TPM) in Settings → Load Models
 
-### "API Error: max_tokens must be ≤ 8192"
-- **Cause**: Groq model limit exceeded
-- **Fix**: In Project Settings, reduce "Max Output Tokens" for Groq
+### "API Error: Invalid API Key"
+- Open Settings (⚙), re-enter your key, and click Save
+- Make sure the correct provider is selected
 
-### "Ollama not running at localhost:11434"
-- **Fix**: Run `ollama serve` in a terminal
+### "Ollama not running"
+- Run `ollama serve` in a terminal before using the tool
 
-### No version/timestamp displayed
-- **Fix**: Ensure `utils.js` is loaded before page renders
-- Check browser console for errors
-
-## Data Export & Backup
-
-### JSON (Recommended for backup)
-- Full round-trip fidelity
-- Includes all project settings
-- Can be imported to restore data
-
-### CSV (For Excel)
-- FMEA data in spreadsheet format
-- Can reimport from export
-
-### PDF (For sharing)
-- Professional project report
-- Read-only, suitable for stakeholders
-- Includes charts and KPIs
-
-## Performance Notes
-
-- **Token estimation** accounts for 4 chars ≈ 1 token
-- **Cost estimation** uses current provider pricing (updated in code)
-- **RPN calculation** real-time as you edit (S × O × D)
-- **Document limit** prevents browser/API timeout (default 150k chars)
-
-## Limitations
-
-- **Single-user per browser** (separate users = different browsers/machines)
-- **No cloud sync** (data stays local)
-- **No offline first sync** (works offline after load, but new data is local-only)
-- **No user management** (simple username/password)
-- **Max document size** 150,000 characters (adjustable, API-dependent)
-
-## Future Enhancement Ideas
-
-- [ ] Multi-user collaboration (WebSocket-based sync)
-- [ ] Cloud backup/restore
-- [ ] Advanced search and filtering
-- [ ] Custom RPN thresholds by industry
-- [ ] Risk heat maps and trend analysis
-- [ ] Integration with issue tracking (Jira, Linear)
-- [ ] Mobile app (React Native)
-- [ ] Automated FMEA suggestions from logs
-- [ ] Real-time incident analytics
+---
 
 ## License
 
 Internal tool. Created by Andrzej Grzegorczyk.
 
-## Support
-
-For issues or feature requests, check:
-- [BUILD_INSTRUCTIONS.md](BUILD_INSTRUCTIONS.md) - Build system
-- [FMEA_TOOL_MODULARIZATION_HANDOFF_2.md](FMEA_TOOL_MODULARIZATION_HANDOFF_2.md) - Architecture details
-
-### Getting Help with Providers
-
-- **Claude**: [console.anthropic.com/docs](https://console.anthropic.com/docs)
-- **Gemini**: [ai.google.dev/docs](https://ai.google.dev/docs)
-- **Groq**: [console.groq.com/docs](https://console.groq.com/docs)
-- **Ollama**: [ollama.ai/library](https://ollama.ai/library)
-
 ---
 
-**Current Version:** 1.1.1 | **Last Updated:** April 27, 2026
-
-```
-ver.: 1.1.1
-Built: 04/27/2026 18:47:42 UTC
-```
+**Version:** 1.2.0 | **Built:** 04/28/2026 08:06:52 UTC
