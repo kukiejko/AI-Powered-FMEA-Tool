@@ -432,8 +432,9 @@ window.analyze = function(){
       if(d.error){
         var msg = d.error.message || '';
         if (msg.indexOf('too large') !== -1 || msg.indexOf('Request too large') !== -1 || msg.indexOf('TPM') !== -1) {
-          setStatus('❌ Document too large for this Groq model\'s free tier limit. ' +
-            '<strong>Fix:</strong> Reduce the document range (use the Range Control above) or open Settings and pick a model with a higher limit (e.g. mixtral-8x7b-32768).', 'error');
+          setStatus('❌ Document too large for this model\'s free-tier TPM limit. ' +
+            '<strong>Fix:</strong> Reduce the window size in Range Control above, or open Settings → Load Models and pick a model with a higher TPM limit ' +
+            '(highest free-tier: <strong>gemma2-9b-it</strong> and <strong>gemma-7b-it</strong> at 15,000 TPM → ~56k chars safe window).', 'error');
         } else {
           setStatus('❌ Groq API error: ' + msg, 'error');
         }

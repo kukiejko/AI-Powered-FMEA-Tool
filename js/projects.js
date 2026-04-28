@@ -226,14 +226,55 @@ window.saveProjSettings = async function() {
   setTimeout(function(){ el.textContent = ''; }, 2500);
 };
 
+// TPM = tokens per minute on Groq free tier (on_demand)
+// Source: https://console.groq.com/docs/rate-limits
+var GROQ_TPM = {
+  'llama-3.1-8b-instant':            6000,
+  'llama-3.1-70b-versatile':         6000,
+  'llama-3.3-70b-versatile':         6000,
+  'llama-3.3-70b-specdec':           6000,
+  'llama-3.2-1b-preview':            7000,
+  'llama-3.2-3b-preview':            7000,
+  'llama-3.2-11b-vision-preview':    7000,
+  'llama-3.2-90b-vision-preview':    7000,
+  'mixtral-8x7b-32768':              5000,
+  'gemma-7b-it':                    15000,
+  'gemma2-9b-it':                   15000,
+  'deepseek-r1-distill-llama-70b':   6000,
+  'deepseek-r1-distill-qwen-32b':    6000,
+  'llama3-8b-8192':                  6000,
+  'llama3-70b-8192':                 6000,
+  'llama3-groq-8b-8192-tool-use-preview':  6000,
+  'llama3-groq-70b-8192-tool-use-preview': 6000,
+};
+
+window.getGroqTpm = function(modelId) {
+  return GROQ_TPM[modelId] || 6000;
+};
+
+// Safe document window in chars: (TPM - 1000 token prompt overhead) * 4 chars/token
+window.getGroqSafeWindowChars = function(modelId) {
+  var tpm = getGroqTpm(modelId);
+  return Math.max(4000, (tpm - 1000) * 4);
+};
+
 window.getGroqModelPricing = function(modelId) {
   var groqModels = {
-    'mixtral-8x7b-32768': { inM: 0.24, outM: 0.24, name: 'Mixtral 8x7B (32k)' },
-    'llama-3.1-70b-versatile': { inM: 0.59, outM: 0.79, name: 'Llama 3.1 70B' },
-    'llama-3.1-8b-instant': { inM: 0.05, outM: 0.1, name: 'Llama 3.1 8B' },
-    'llama-3.2-90b-vision-preview': { inM: 0.90, outM: 0.90, name: 'Llama 3.2 90B Vision' },
-    'llama-3.2-11b-vision-preview': { inM: 0.06, outM: 0.06, name: 'Llama 3.2 11B Vision' },
-    'gemma-7b-it': { inM: 0.07, outM: 0.07, name: 'Gemma 7B' },
+    'mixtral-8x7b-32768':                  { inM: 0.24, outM: 0.24, name: 'Mixtral 8x7B (32k)' },
+    'llama-3.1-70b-versatile':             { inM: 0.59, outM: 0.79, name: 'Llama 3.1 70B' },
+    'llama-3.1-8b-instant':                { inM: 0.05, outM: 0.08, name: 'Llama 3.1 8B' },
+    'llama-3.3-70b-versatile':             { inM: 0.59, outM: 0.79, name: 'Llama 3.3 70B' },
+    'llama-3.3-70b-specdec':               { inM: 0.59, outM: 0.99, name: 'Llama 3.3 70B SpecDec' },
+    'llama-3.2-90b-vision-preview':        { inM: 0.90, outM: 0.90, name: 'Llama 3.2 90B Vision' },
+    'llama-3.2-11b-vision-preview':        { inM: 0.06, outM: 0.06, name: 'Llama 3.2 11B Vision' },
+    'llama-3.2-3b-preview':                { inM: 0.06, outM: 0.06, name: 'Llama 3.2 3B' },
+    'llama-3.2-1b-preview':                { inM: 0.04, outM: 0.04, name: 'Llama 3.2 1B' },
+    'llama3-8b-8192':                      { inM: 0.05, outM: 0.08, name: 'Llama 3 8B' },
+    'llama3-70b-8192':                     { inM: 0.59, outM: 0.79, name: 'Llama 3 70B' },
+    'gemma-7b-it':                         { inM: 0.07, outM: 0.07, name: 'Gemma 7B' },
+    'gemma2-9b-it':                        { inM: 0.20, outM: 0.20, name: 'Gemma2 9B' },
+    'deepseek-r1-distill-llama-70b':       { inM: 0.75, outM: 0.99, name: 'DeepSeek R1 70B' },
+    'deepseek-r1-distill-qwen-32b':        { inM: 0.69, outM: 0.69, name: 'DeepSeek R1 Qwen 32B' },
     'default': { inM: 0.50, outM: 0.50, name: 'Groq Model' }
   };
   return groqModels[modelId] || groqModels['default'];
@@ -257,12 +298,18 @@ window.loadGroqModels = async function() {
 
     if (modelSel) {
       modelSel.innerHTML = '';
-      data.data.forEach(function(m) {
+      // sort by TPM descending so highest-limit models appear first
+      var sorted = data.data.slice().sort(function(a, b) {
+        return (GROQ_TPM[b.id] || 6000) - (GROQ_TPM[a.id] || 6000);
+      });
+      sorted.forEach(function(m) {
         var opt = document.createElement('option');
         opt.value = m.id;
+        var tpm = getGroqTpm(m.id);
+        var safeChars = getGroqSafeWindowChars(m.id);
         var pricing = getGroqModelPricing(m.id);
         var priceStr = '$' + pricing.inM.toFixed(2) + '/$' + pricing.outM.toFixed(2);
-        opt.textContent = m.id + ' (' + priceStr + '/1M tokens)';
+        opt.textContent = m.id + '  |  TPM: ' + tpm.toLocaleString() + '  |  safe window: ~' + Math.round(safeChars / 1000) + 'k chars  |  ' + priceStr + '/1M tokens';
         modelSel.appendChild(opt);
       });
       if (modelSel.options.length === 0) { modelSel.innerHTML = '<option value="">No models available</option>'; }
@@ -284,8 +331,14 @@ window.updateGroqModelPricing = function() {
     return;
   }
 
-  var pricing = getGroqModelPricing(modelId);
-  priceDisplay.textContent = pricing.name + ': $' + pricing.inM.toFixed(2) + ' input / $' + pricing.outM.toFixed(2) + ' output per 1M tokens';
+  var pricing  = getGroqModelPricing(modelId);
+  var tpm      = getGroqTpm(modelId);
+  var safeK    = Math.round(getGroqSafeWindowChars(modelId) / 1000);
+  priceDisplay.innerHTML =
+    pricing.name +
+    ': $' + pricing.inM.toFixed(2) + ' in / $' + pricing.outM.toFixed(2) + ' out per 1M tokens' +
+    ' &nbsp;|&nbsp; <strong>TPM limit: ' + tpm.toLocaleString() + '</strong>' +
+    ' &nbsp;|&nbsp; safe window: <strong>~' + safeK + 'k chars</strong>';
 };
 
 window.updateSettingsApiKeyUI = function() {
