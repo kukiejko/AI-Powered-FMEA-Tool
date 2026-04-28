@@ -429,7 +429,17 @@ window.analyze = function(){
       if(d.error){ setStatus('❌ Gemini API error: '+d.error.message,'error'); return; }
       raw = (d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts && d.candidates[0].content.parts[0]) ? d.candidates[0].content.parts[0].text || '' : '';
     } else if (provider === 'groq') {
-      if(d.error){ setStatus('❌ Groq API error: '+d.error.message,'error'); return; }
+      if(d.error){
+        var msg = d.error.message || '';
+        if (msg.indexOf('too large') !== -1 || msg.indexOf('Request too large') !== -1 || msg.indexOf('TPM') !== -1) {
+          setStatus('❌ Document too large for this Groq model\'s free tier limit. ' +
+            '<strong>Fix:</strong> Reduce the document range (use the Range Control above) or open Settings and pick a model with a higher limit (e.g. mixtral-8x7b-32768).', 'error');
+        } else {
+          setStatus('❌ Groq API error: ' + msg, 'error');
+        }
+        document.getElementById('analyzeBtn').disabled = false;
+        return;
+      }
       raw = (d.choices && d.choices[0] && d.choices[0].message) ? d.choices[0].message.content || '' : '';
     } else if (provider === 'ollama') {
       if(d.error){ setStatus('❌ Ollama error: '+d.error,'error'); return; }
