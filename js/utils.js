@@ -6,7 +6,7 @@ var COMPILE_TIME = '2026-04-27T18:47:42.3947744Z';
 var currentUser = null;
 var currentProjectId = null;
 var currentMode = 'simple';
-var currentProvider = 'claude';
+var currentProvider = 'groq';
 var hiddenCols = {};
 var rows = [];
 var fileTexts = [];
@@ -207,10 +207,10 @@ var Storage = {
 
 // ── API key helpers (Supabase-aware) ──
 function getProvider() {
-  return currentProvider || 'claude';
+  return currentProvider || 'groq';
 }
 function setProvider(provider) {
-  currentProvider = provider || 'claude';
+  currentProvider = provider || 'groq';
   (async function() {
     await Storage.set('provider:' + (currentUser || ''), currentProvider);
   })();
