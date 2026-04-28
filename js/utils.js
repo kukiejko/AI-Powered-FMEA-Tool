@@ -109,6 +109,7 @@ var Storage = {
       try {
         if (key.startsWith('proj:')) {
           // proj:[user]:[id] → projects table (upsert)
+          // Note: rows are stored in fmea_rows table, not here
           var proj = JSON.parse(value);
           var result = await supabaseQuery(
             supabase.from('projects').upsert({
@@ -126,7 +127,6 @@ var Storage = {
               confidentiality: proj.confidentiality,
               team: proj.team,
               hidden_cols: proj.hiddenCols,
-              rows: proj.rows || [],
               created_at: proj.createdAt || new Date().toISOString(),
               updated_at: new Date().toISOString()
             })

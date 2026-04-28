@@ -159,9 +159,10 @@ async function autoSave() {
     var projInDb = await supabaseGet(
       supabase.from('projects').select('id').eq('id', currentProjectId).eq('user_id', currentUserId).single()
     );
+    console.log('[autoSave] Project verification:', { currentProjectId, currentUserId, projInDb });
     if (!projInDb) {
       setSaveStatus('❌ Save failed: project not saved to database. Check your connection.', true);
-      console.error('[autoSave] Project not found in Supabase after save attempt');
+      console.error('[autoSave] Project not found in Supabase after save attempt. ID:', currentProjectId, 'User:', currentUserId);
       return;
     }
 
