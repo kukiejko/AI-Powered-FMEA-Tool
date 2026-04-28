@@ -189,6 +189,11 @@ window.doLogin = async function() {
       document.getElementById('dashUserLabel').textContent = '👤 ' + email;
       document.getElementById('workUserLabel').textContent = '👤 ' + email;
 
+      // Load API keys from Supabase into localStorage cache
+      if (typeof loadApiKeysFromSupabase === 'function') {
+        await loadApiKeysFromSupabase();
+      }
+
       // Navigate to dashboard
       showScreen('screenDash');
       loadDashboard();
@@ -309,6 +314,11 @@ window.checkAuthSession = async function() {
       // Update UI
       document.getElementById('dashUserLabel').textContent = '👤 ' + user.email;
       document.getElementById('workUserLabel').textContent = '👤 ' + user.email;
+
+      // Load API keys from Supabase into localStorage cache
+      if (typeof loadApiKeysFromSupabase === 'function') {
+        await loadApiKeysFromSupabase();
+      }
 
       // User is logged in, show dashboard
       loadDashboard();

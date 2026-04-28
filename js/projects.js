@@ -143,7 +143,7 @@ window.openProjectSettings = async function() {
 
   // Populate API key field if present
   var apiField = document.getElementById('settingsApiKey');
-  if (apiField) apiField.value = getApiKey();
+  if (apiField) apiField.value = getApiKey(); // synchronous localStorage read
 
   // Load saved Groq model and max_tokens if applicable
   var groqModelResult = await Storage.get('groqModel:' + (currentUser || ''));

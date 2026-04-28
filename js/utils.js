@@ -218,14 +218,15 @@ function setProvider(provider) {
 function getApiKeyForProvider(provider) {
   provider = provider || getProvider();
   var key = 'apikey:' + (currentUser || '') + ':' + provider;
-  return (async function() {
-    var r = await Storage.get(key);
-    return r ? r.value : '';
-  })();
+  // Read from localStorage synchronously (fast, used by analyze/projects)
+  return localStorage.getItem(key) || '';
 }
 function setApiKeyForProvider(provider, key) {
   provider = provider || getProvider();
   var k = 'apikey:' + (currentUser || '') + ':' + provider;
+  // Save to localStorage immediately for synchronous reads
+  localStorage.setItem(k, key);
+  // Also sync to Supabase in background
   (async function() {
     await Storage.set(k, key);
   })();
@@ -236,6 +237,19 @@ function getApiKey() {
 function setApiKey(key) {
   setApiKeyForProvider(getProvider(), key);
 }
+
+// Load API keys from Supabase into localStorage cache on login
+window.loadApiKeysFromSupabase = async function() {
+  var providers = ['claude', 'gemini', 'groq', 'ollama'];
+  for (var i = 0; i < providers.length; i++) {
+    var p = providers[i];
+    var k = 'apikey:' + (currentUser || '') + ':' + p;
+    var r = await Storage.get(k);
+    if (r && r.value) {
+      localStorage.setItem(k, r.value);
+    }
+  }
+};
 
 // ── Storage key helpers ──
 function projKey(id) { return 'proj:' + currentUser + ':' + id; }
