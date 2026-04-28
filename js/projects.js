@@ -68,7 +68,7 @@ window.openProject = async function (id) {
   if (!proj) return;
   currentProjectId = id;
   currentMode = proj.mode || 'simple';
-  hiddenCols = proj.hiddenCols || {};
+  hiddenCols = proj.hiddenCols || proj.hidden_cols || {};
   rows = (proj.rows || []).map(function(r){ return Object.assign({ _rowH: 52 }, r); });
   fileTexts = []; fileNames = [];
   document.getElementById('bannerName').textContent = proj.name;

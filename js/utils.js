@@ -126,6 +126,7 @@ var Storage = {
               confidentiality: proj.confidentiality,
               team: proj.team,
               hidden_cols: proj.hiddenCols,
+              rows: proj.rows || [],
               updated_at: new Date().toISOString()
             })
           );
