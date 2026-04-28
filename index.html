@@ -167,34 +167,68 @@
           <div class="file-list" id="fileList"></div>
           <textarea class="doc-textarea" id="manualText" placeholder="Paste your document text here (recommended for PDFs — open the PDF, select all text, copy and paste it here)..." oninput="updateCostEstimator()"></textarea>
 
-          <!-- Document Size Control -->
+          <!-- Document Range Control -->
           <div style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:12px">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
               <label style="font-size:0.78rem;font-weight:600;color:#2d3748">📋 Document Range Control</label>
               <span id="docSizeInfo" style="font-size:0.75rem;color:#718096"></span>
             </div>
 
-            <div style="margin-bottom:10px">
-              <label style="font-size:0.73rem;color:#4a5568;margin-bottom:4px;display:block">Skip first N characters:</label>
-              <div style="display:flex;gap:8px;align-items:center">
-                <input type="number" id="docStartChar" min="0" value="0" style="width:100px;padding:6px;border:1px solid #cbd5e0;border-radius:4px;font-size:0.85rem" oninput="updateDocSizeDisplay()">
-                <span style="font-size:0.75rem;color:#718096">(e.g., 0 = start from beginning, 1000 = skip first 1000 chars)</span>
+            <!-- Max range cap row -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+              <label style="font-size:0.73rem;color:#4a5568;white-space:nowrap">Max range:</label>
+              <input type="number" id="docMaxRange" min="1000" max="150000" step="1000" value="150000"
+                style="width:90px;padding:4px 6px;border:1px solid #cbd5e0;border-radius:4px;font-size:0.82rem"
+                oninput="clampDocMaxRange()">
+              <span style="font-size:0.73rem;color:#718096">chars &nbsp;|&nbsp; Window size:</span>
+              <input type="number" id="docWindowSize" min="1000" max="150000" step="1000" value="150000"
+                style="width:90px;padding:4px 6px;border:1px solid #cbd5e0;border-radius:4px;font-size:0.82rem"
+                oninput="onWindowSizeInput()">
+              <span style="font-size:0.73rem;color:#718096">chars</span>
+              <button onclick="resetDocRange()" style="margin-left:auto;padding:3px 10px;border:1px solid #cbd5e0;border-radius:4px;background:#fff;font-size:0.73rem;cursor:pointer;color:#4a5568">Reset</button>
+            </div>
+
+            <!-- Dual-handle range slider -->
+            <div style="margin-bottom:6px">
+              <div id="rangeTrackWrap" style="position:relative;height:32px;margin:0 4px">
+                <!-- filled bar -->
+                <div id="rangeBar" style="position:absolute;top:13px;height:6px;background:#4299e1;border-radius:3px;pointer-events:none;z-index:1"></div>
+                <!-- drag handle for moving the whole window -->
+                <div id="rangeWindow" style="position:absolute;top:10px;height:12px;background:rgba(66,153,225,0.18);border:1px solid #4299e1;border-radius:3px;cursor:grab;z-index:2" title="Drag to move range window"></div>
+                <input type="range" id="docStartSlider" min="0" max="150000" step="1000" value="0"
+                  style="position:absolute;width:100%;top:0;left:0;margin:0;opacity:0;height:32px;cursor:pointer;z-index:4"
+                  oninput="onStartSlider()">
+                <input type="range" id="docEndSlider" min="1000" max="150000" step="1000" value="150000"
+                  style="position:absolute;width:100%;top:0;left:0;margin:0;opacity:0;height:32px;cursor:pointer;z-index:3"
+                  oninput="onEndSlider()">
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:#a0aec0;margin-top:2px">
+                <span id="rangeStartLabel">0</span>
+                <span id="rangeMidLabel"></span>
+                <span id="rangeEndLabel">150,000</span>
               </div>
             </div>
 
-            <div>
-              <label style="font-size:0.73rem;color:#4a5568;margin-bottom:4px;display:block">Maximum characters to analyze:</label>
-              <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-                <input type="range" id="docSizeSlider" min="1000" max="150000" step="1000" value="150000" style="flex:1;cursor:pointer" oninput="updateDocSizeDisplay()">
-                <input type="number" id="docSizeInput" min="1000" max="150000" value="150000" style="width:80px;padding:6px;border:1px solid #cbd5e0;border-radius:4px;font-size:0.85rem" oninput="syncDocSizeInput()">
-                <span style="font-size:0.75rem;color:#718096;white-space:nowrap">chars</span>
-              </div>
+            <!-- Numeric inputs for start/end -->
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+              <label style="font-size:0.73rem;color:#4a5568;white-space:nowrap">Start:</label>
+              <input type="number" id="docStartChar" min="0" value="0"
+                style="width:90px;padding:4px 6px;border:1px solid #cbd5e0;border-radius:4px;font-size:0.82rem"
+                oninput="onStartInput()">
+              <label style="font-size:0.73rem;color:#4a5568;white-space:nowrap">End:</label>
+              <input type="number" id="docEndChar" min="1000" value="150000"
+                style="width:90px;padding:4px 6px;border:1px solid #cbd5e0;border-radius:4px;font-size:0.82rem"
+                oninput="onEndInput()">
+              <span style="font-size:0.73rem;color:#718096">chars</span>
             </div>
+
+            <!-- hidden legacy inputs kept for backward compat -->
+            <input type="hidden" id="docSizeSlider" value="150000">
+            <input type="hidden" id="docSizeInput" value="150000">
 
             <div style="font-size:0.72rem;color:#4a5568;line-height:1.4">
               <div id="docRangeInfo" style="background:#fff;border:1px solid #cbd5e0;border-radius:4px;padding:6px 8px;margin-bottom:4px;font-family:monospace;font-size:0.7rem;color:#2d3748"></div>
-              <div id="docSizeWarning" style="display:none;color:#c05621;margin-bottom:4px">⚠️ Document exceeds range limit. Only characters in the specified range will be analyzed.</div>
-              <div>Reduce the limit or increase the start offset if you get "Request Entity Too Large" errors.</div>
+              <div id="docSizeWarning" style="display:none;color:#c05621;margin-bottom:4px">⚠️ Document exceeds range. Only characters in the specified range will be analyzed.</div>
             </div>
           </div>
 

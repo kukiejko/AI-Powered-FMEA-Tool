@@ -173,9 +173,13 @@ function renderFileList(){
 window.removeFile = function(i){ fileTexts.splice(i,1); fileNames.splice(i,1); renderFileList(); };
 
 // ── Document size control ──
+// ── Document Range Control ──
+var _rangeMax = 150000; // current slider maximum (set by "Max range" input)
+
 window.getDocumentSizeLimit = function() {
-  var input = document.getElementById('docSizeInput');
-  return input ? parseInt(input.value) || 150000 : 150000;
+  var end = parseInt((document.getElementById('docEndChar') || {}).value) || 150000;
+  var start = parseInt((document.getElementById('docStartChar') || {}).value) || 0;
+  return Math.max(1000, end - start);
 };
 
 window.getDocumentStartChar = function() {
@@ -185,56 +189,192 @@ window.getDocumentStartChar = function() {
 
 window.getAnalysisRange = function() {
   var content = getContent();
-  var startChar = getDocumentStartChar();
-  var limit = getDocumentSizeLimit();
-  var endChar = Math.min(content.length, startChar + limit);
-  return {
-    start: Math.min(startChar, content.length),
-    end: endChar,
-    total: content.length,
-    text: content.substring(Math.min(startChar, content.length), endChar)
-  };
+  var start = getDocumentStartChar();
+  var end = Math.min(content.length, parseInt((document.getElementById('docEndChar') || {}).value) || 150000);
+  start = Math.min(start, content.length);
+  end = Math.max(start + 1, end);
+  return { start: start, end: end, total: content.length, text: content.substring(start, end) };
+};
+
+function _getRangeMax() {
+  var el = document.getElementById('docMaxRange');
+  return el ? Math.max(1000, Math.min(150000, parseInt(el.value) || 150000)) : 150000;
+}
+
+function _updateSliderVisuals() {
+  var startEl = document.getElementById('docStartSlider');
+  var endEl   = document.getElementById('docEndSlider');
+  var bar     = document.getElementById('rangeBar');
+  var win     = document.getElementById('rangeWindow');
+  var startLbl= document.getElementById('rangeStartLabel');
+  var endLbl  = document.getElementById('rangeEndLabel');
+  var midLbl  = document.getElementById('rangeMidLabel');
+  if (!startEl || !endEl || !bar) return;
+
+  var max   = _getRangeMax();
+  var start = Math.max(0, Math.min(max, parseInt(startEl.value) || 0));
+  var end   = Math.max(start + 1000, Math.min(max, parseInt(endEl.value) || max));
+
+  var pStart = start / max * 100;
+  var pEnd   = end   / max * 100;
+
+  bar.style.left  = pStart + '%';
+  bar.style.width = (pEnd - pStart) + '%';
+  if (win) { win.style.left = pStart + '%'; win.style.width = (pEnd - pStart) + '%'; }
+
+  if (startLbl) startLbl.textContent = start.toLocaleString();
+  if (endLbl)   endLbl.textContent   = end.toLocaleString();
+  if (midLbl)   midLbl.textContent   = Math.round((start + end) / 2).toLocaleString();
+}
+
+function _applyRange(start, end) {
+  var max = _getRangeMax();
+  start = Math.max(0, Math.min(max - 1000, start));
+  end   = Math.max(start + 1000, Math.min(max, end));
+
+  var startSlider = document.getElementById('docStartSlider');
+  var endSlider   = document.getElementById('docEndSlider');
+  var startInput  = document.getElementById('docStartChar');
+  var endInput    = document.getElementById('docEndChar');
+  var winSizeEl   = document.getElementById('docWindowSize');
+
+  if (startSlider) startSlider.value = start;
+  if (endSlider)   endSlider.value   = end;
+  if (startInput)  startInput.value  = start;
+  if (endInput)    endInput.value    = end;
+  if (winSizeEl)   winSizeEl.value   = end - start;
+
+  // keep legacy hidden inputs in sync
+  var legacySize  = document.getElementById('docSizeInput');
+  if (legacySize) legacySize.value = end - start;
+
+  _updateSliderVisuals();
+  window.updateDocSizeDisplay();
+}
+
+window.onStartSlider = function() {
+  var startEl = document.getElementById('docStartSlider');
+  var endEl   = document.getElementById('docEndSlider');
+  var winEl   = document.getElementById('docWindowSize');
+  var start   = parseInt(startEl.value) || 0;
+  var winSize = parseInt((winEl || {}).value) || 150000;
+  _applyRange(start, start + winSize);
+};
+
+window.onEndSlider = function() {
+  var startEl = document.getElementById('docStartSlider');
+  var endEl   = document.getElementById('docEndSlider');
+  var winEl   = document.getElementById('docWindowSize');
+  var end     = parseInt(endEl.value) || _getRangeMax();
+  var winSize = parseInt((winEl || {}).value) || 150000;
+  _applyRange(end - winSize, end);
+};
+
+window.onStartInput = function() {
+  var startInput = document.getElementById('docStartChar');
+  var endInput   = document.getElementById('docEndChar');
+  var start = Math.max(0, parseInt(startInput.value) || 0);
+  var end   = parseInt(endInput.value) || _getRangeMax();
+  if (end <= start) end = start + 1000;
+  _applyRange(start, end);
+};
+
+window.onEndInput = function() {
+  var startInput = document.getElementById('docStartChar');
+  var endInput   = document.getElementById('docEndChar');
+  var start = Math.max(0, parseInt(startInput.value) || 0);
+  var end   = parseInt(endInput.value) || _getRangeMax();
+  _applyRange(start, end);
+};
+
+window.onWindowSizeInput = function() {
+  var winEl   = document.getElementById('docWindowSize');
+  var startEl = document.getElementById('docStartChar');
+  var winSize = Math.max(1000, parseInt(winEl.value) || 1000);
+  var start   = parseInt(startEl.value) || 0;
+  _applyRange(start, start + winSize);
+};
+
+window.clampDocMaxRange = function() {
+  var maxEl = document.getElementById('docMaxRange');
+  var max   = Math.max(1000, Math.min(150000, parseInt(maxEl.value) || 150000));
+  maxEl.value = max;
+  _rangeMax = max;
+
+  // Update all slider maxes
+  ['docStartSlider','docEndSlider'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.max = max;
+  });
+
+  // Clamp current range to new max
+  var startEl = document.getElementById('docStartChar');
+  var endEl   = document.getElementById('docEndChar');
+  var start   = Math.min(parseInt(startEl.value) || 0, max - 1000);
+  var end     = Math.min(parseInt(endEl.value)   || max, max);
+  _applyRange(start, end);
+};
+
+window.resetDocRange = function() {
+  var maxEl = document.getElementById('docMaxRange');
+  if (maxEl) maxEl.value = 150000;
+  _rangeMax = 150000;
+  ['docStartSlider','docEndSlider'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.max = 150000;
+  });
+  _applyRange(0, 150000);
 };
 
 window.updateDocSizeDisplay = function() {
-  var slider = document.getElementById('docSizeSlider');
-  var input = document.getElementById('docSizeInput');
-  var startInput = document.getElementById('docStartChar');
-  var info = document.getElementById('docSizeInfo');
-  var warning = document.getElementById('docSizeWarning');
-  var rangeInfo = document.getElementById('docRangeInfo');
-
-  if (!slider || !input) return;
-  var limit = parseInt(slider.value);
-  input.value = limit;
-  var startChar = startInput ? Math.max(0, parseInt(startInput.value) || 0) : 0;
-
-  var range = getAnalysisRange();
+  var info     = document.getElementById('docSizeInfo');
+  var warning  = document.getElementById('docSizeWarning');
+  var rangeInfo= document.getElementById('docRangeInfo');
+  var range    = getAnalysisRange();
   var willTruncate = range.end < range.total;
 
-  if (info) {
-    var pct = limit === 150000 ? '100%' : ((limit / 150000) * 100).toFixed(0) + '%';
-    info.textContent = 'Total: ' + range.total.toLocaleString() + ' | Analyzing: ' + range.text.length.toLocaleString();
-  }
-
-  if (rangeInfo) {
-    rangeInfo.textContent = 'Analyzing characters ' + range.start.toLocaleString() + '-' + range.end.toLocaleString() + ' of ' + range.total.toLocaleString();
-  }
-
+  if (info) info.textContent = 'Total: ' + range.total.toLocaleString() + ' | Analyzing: ' + range.text.length.toLocaleString();
+  if (rangeInfo) rangeInfo.textContent = 'Analyzing chars ' + range.start.toLocaleString() + ' – ' + range.end.toLocaleString() + ' of ' + range.total.toLocaleString();
   if (warning) warning.style.display = willTruncate ? 'block' : 'none';
 
   updateCostEstimator();
 };
 
-window.syncDocSizeInput = function() {
-  var input = document.getElementById('docSizeInput');
-  var slider = document.getElementById('docSizeSlider');
-  if (!input || !slider) return;
-  var val = Math.max(1000, Math.min(150000, parseInt(input.value) || 150000));
-  input.value = val;
-  slider.value = val;
-  updateDocSizeDisplay();
-};
+// drag the range window as a block
+(function() {
+  var _dragging = false, _dragStartX = 0, _dragStartVal = 0, _dragWindowSize = 0;
+
+  document.addEventListener('DOMContentLoaded', function() {
+    var win = document.getElementById('rangeWindow');
+    if (!win) return;
+
+    win.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      _dragging = true;
+      _dragStartX = e.clientX;
+      _dragStartVal = parseInt(document.getElementById('docStartChar').value) || 0;
+      _dragWindowSize = (parseInt(document.getElementById('docEndChar').value) || 150000) - _dragStartVal;
+      win.style.cursor = 'grabbing';
+    });
+
+    document.addEventListener('mousemove', function(e) {
+      if (!_dragging) return;
+      var track = document.getElementById('rangeTrackWrap');
+      if (!track) return;
+      var max  = _getRangeMax();
+      var rect = track.getBoundingClientRect();
+      var dx   = e.clientX - _dragStartX;
+      var dVal = Math.round((dx / rect.width) * max / 1000) * 1000;
+      _applyRange(_dragStartVal + dVal, _dragStartVal + dVal + _dragWindowSize);
+    });
+
+    document.addEventListener('mouseup', function() {
+      if (_dragging) { _dragging = false; var win2 = document.getElementById('rangeWindow'); if (win2) win2.style.cursor = 'grab'; }
+    });
+  });
+})();
+
+window.syncDocSizeInput = function() {}; // legacy no-op
 
 // ── AP calculation ──
 function calcAP(s,o,d){
