@@ -132,6 +132,26 @@ window.updateLoginApiKeyUI = function() {
 };
 
 // ============================================================================
+// GOOGLE SSO
+// ============================================================================
+
+window.doLoginWithGoogle = async function() {
+  clearLoginErrors();
+  try {
+    var response = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.href
+      }
+    });
+    if (response.error) throw new Error(response.error.message);
+  } catch (err) {
+    showLoginError('Google sign-in failed: ' + err.message);
+    console.error('Google OAuth error:', err);
+  }
+};
+
+// ============================================================================
 // LOGIN FUNCTION
 // ============================================================================
 
