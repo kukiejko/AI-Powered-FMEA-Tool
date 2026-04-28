@@ -257,7 +257,7 @@ function getMaxTokensForProvider(provider) {
 
 function getGroqModel() {
   var modelSel = document.getElementById('groqModelSelect');
-  return (modelSel && modelSel.value) ? modelSel.value : 'mixtral-8x7b-32768';
+  return (modelSel && modelSel.value) ? modelSel.value : 'llama-3.1-8b-instant';
 }
 
 function updateActiveModelBadge() {
@@ -346,6 +346,8 @@ window.analyze = function(){
 
   var provider = getProvider();
   var apiKey = getApiKey();
+  var _dbgModel = provider === 'groq' ? getGroqModel() : 'n/a';
+  console.log('[analyze] provider='+provider+' user='+currentUser+' keyLen='+(apiKey?apiKey.length:0)+' keyStart='+(apiKey?apiKey.substring(0,8):'')+' model='+_dbgModel);
   if(!apiKey && provider !== 'ollama'){
     setStatus('❌ Enter your ' + provider + ' API key in Settings (⚙ Header button) to enable AI analysis.','error');
     return;

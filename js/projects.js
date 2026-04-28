@@ -370,7 +370,7 @@ window.testApiConnection = async function() {
     } else if (provider === 'groq') {
       if (!key) { alert('Enter your Groq API key first.'); return; }
       var modelSel = document.getElementById('groqModelSelect');
-      var model = (modelSel && modelSel.value) ? modelSel.value : 'mixtral-8x7b-32768';
+      var model = (modelSel && modelSel.value) ? modelSel.value : 'llama-3.1-8b-instant';
       var resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
