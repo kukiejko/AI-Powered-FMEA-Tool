@@ -1,0 +1,3 @@
+# GitHub Pages Jekyll configuration
+# Disable Jekyll processing to serve files directly
+skip_jekyll: true
