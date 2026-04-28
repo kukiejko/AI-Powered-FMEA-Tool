@@ -84,6 +84,7 @@ window.openProject = async function (id) {
   updateColToggleButtons();
   incidents = [];
   loadIncidents();
+  if (typeof updateActiveModelBadge === 'function') updateActiveModelBadge();
   switchTab('upload');
 };
 
@@ -218,6 +219,7 @@ window.saveProjSettings = async function() {
   await saveProject(proj);
   document.getElementById('bannerName').textContent = proj.name;
   document.getElementById('bannerDesc').textContent = proj.description || '';
+  if (typeof updateActiveModelBadge === 'function') updateActiveModelBadge();
   closeProjSettings();
   var el = document.getElementById('bannerSave');
   el.textContent = '✓ Header saved';

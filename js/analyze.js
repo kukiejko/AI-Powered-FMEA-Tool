@@ -260,6 +260,26 @@ function getGroqModel() {
   return (modelSel && modelSel.value) ? modelSel.value : 'mixtral-8x7b-32768';
 }
 
+function updateActiveModelBadge() {
+  var badge = document.getElementById('activeModelBadge');
+  if (!badge) return;
+  var provider = getProvider();
+  var label = '';
+  if (provider === 'groq') {
+    label = '🤖 Groq · ' + getGroqModel();
+  } else if (provider === 'claude') {
+    label = '🤖 Claude';
+  } else if (provider === 'gemini') {
+    label = '🤖 Gemini';
+  } else if (provider === 'ollama') {
+    label = '🤖 Ollama · ' + (getApiKeyForProvider('ollama') || 'mistral');
+  } else {
+    label = '🤖 ' + provider;
+  }
+  badge.textContent = label;
+  badge.style.display = label ? 'inline-block' : 'none';
+}
+
 function charsToTokens(chars) { return Math.ceil(chars / 4); }
 
 function updateCostEstimator() {
@@ -317,6 +337,7 @@ function updateCostEstimator() {
     '</div>';
 }
 window.updateCostEstimator = updateCostEstimator;
+window.updateActiveModelBadge = updateActiveModelBadge;
 
 // ── Analyze ──
 window.analyze = function(){
