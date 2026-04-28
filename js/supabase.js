@@ -13,8 +13,30 @@ var _supabaseLib = window.supabase;
 var supabase = null;
 
 // Initialize immediately using captured library reference
+// Custom storage adapter that explicitly uses window.localStorage
+// (avoids Edge Tracking Prevention blocking Supabase's default storage)
+var customStorage = {
+  getItem: function(key) {
+    try { return window.localStorage.getItem(key); } catch(e) { return null; }
+  },
+  setItem: function(key, value) {
+    try { window.localStorage.setItem(key, value); } catch(e) { console.warn('Storage blocked:', e); }
+  },
+  removeItem: function(key) {
+    try { window.localStorage.removeItem(key); } catch(e) {}
+  }
+};
+
 if (_supabaseLib && typeof _supabaseLib.createClient === 'function') {
-  supabase = _supabaseLib.createClient(SUPABASE_URL, SUPABASE_KEY);
+  supabase = _supabaseLib.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: {
+      flowType: 'implicit',
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      storage: customStorage
+    }
+  });
   console.log('✅ Supabase client initialized');
 } else {
   console.error('❌ Supabase library not found. Check CDN script tag.');

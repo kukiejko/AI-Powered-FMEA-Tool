@@ -137,17 +137,51 @@ window.updateLoginApiKeyUI = function() {
 
 window.doLoginWithGoogle = async function() {
   clearLoginErrors();
+  var btn   = document.getElementById('googleSignInBtn');
+  var icon  = document.getElementById('googleSignInIcon');
+  var label = document.getElementById('googleSignInLabel');
+
+  function resetBtn() {
+    if (btn)   { btn.disabled = false; btn.style.opacity = '1'; }
+    if (icon)  { icon.style.display = ''; }
+    if (label) { label.textContent = 'Sign in with Google'; }
+  }
+
+  if (btn)   { btn.disabled = true; btn.style.opacity = '0.7'; }
+  if (icon)  { icon.style.display = 'none'; }
+  if (label) { label.innerHTML = '<span class="spinner"></span>Redirecting to Google…'; }
+
+  // Timeout fallback — if no redirect happens in 5s, show error
+  var redirectTimeout = setTimeout(function() {
+    resetBtn();
+    showLoginError('Redirect to Google did not start. If you are using Edge, go to Settings → Privacy → Tracking Prevention and set it to "Basic", then try again.');
+  }, 5000);
+
   try {
+    console.log('[Google SSO] Starting OAuth redirect…');
     var response = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.href
+        redirectTo: window.location.origin + window.location.pathname,
+        skipBrowserRedirect: true
       }
     });
+    console.log('[Google SSO] Response:', response);
     if (response.error) throw new Error(response.error.message);
+
+    // Manually navigate to the OAuth URL — Edge sometimes blocks Supabase's auto-redirect
+    if (response.data && response.data.url) {
+      clearTimeout(redirectTimeout);
+      console.log('[Google SSO] Redirecting to:', response.data.url);
+      window.location.href = response.data.url;
+    } else {
+      throw new Error('No OAuth URL returned');
+    }
   } catch (err) {
+    clearTimeout(redirectTimeout);
     showLoginError('Google sign-in failed: ' + err.message);
-    console.error('Google OAuth error:', err);
+    console.error('[Google SSO] Error:', err);
+    resetBtn();
   }
 };
 
@@ -191,7 +225,7 @@ window.doLogin = async function() {
 
       // Load API keys from Supabase into localStorage cache
       if (typeof loadApiKeysFromSupabase === 'function') {
-        await loadApiKeysFromSupabase();
+        loadApiKeysFromSupabase(); // fire and forget — runs in background
       }
 
       // Navigate to dashboard
@@ -303,6 +337,11 @@ window.doLogout = async function() {
 
 window.checkAuthSession = async function() {
   try {
+    // Clean up OAuth hash from URL so it doesn't interfere with next login
+    if (window.location.hash && window.location.hash.indexOf('access_token') !== -1) {
+      history.replaceState(null, '', window.location.pathname);
+    }
+
     var user = await getCurrentUser();
 
     if (user) {
@@ -317,7 +356,7 @@ window.checkAuthSession = async function() {
 
       // Load API keys from Supabase into localStorage cache
       if (typeof loadApiKeysFromSupabase === 'function') {
-        await loadApiKeysFromSupabase();
+        loadApiKeysFromSupabase(); // fire and forget — runs in background
       }
 
       // User is logged in, show dashboard
@@ -359,8 +398,7 @@ window.addEventListener('DOMContentLoaded', async function() {
   onAuthStateChanged(async function(event, session) {
     console.log('Auth event:', event);
 
-    if (event === 'SIGNED_IN') {
-      // User just signed in
+    if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
       await checkAuthSession();
     } else if (event === 'SIGNED_OUT') {
       // User just signed out

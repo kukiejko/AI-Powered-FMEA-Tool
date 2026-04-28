@@ -69,7 +69,48 @@ window.openProject = async function (id) {
   currentProjectId = id;
   currentMode = proj.mode || 'simple';
   hiddenCols = proj.hiddenCols || proj.hidden_cols || {};
-  rows = (proj.rows || []).map(function(r){ return Object.assign({ _rowH: 52 }, r); });
+
+  // Load rows from fmea_rows table
+  var dbRows = await supabaseGet(
+    supabase.from('fmea_rows')
+      .select('*')
+      .eq('project_id', id)
+      .eq('user_id', currentUserId)
+      .order('created_at', { ascending: true })
+  );
+  if (dbRows && dbRows.length > 0) {
+    rows = dbRows.map(function(r) {
+      return Object.assign({ _rowH: 52 }, {
+        id:           r.id,
+        step:         r.step          || '',
+        failureMode:  r.failure_mode  || '',
+        effect:       r.effect        || '',
+        cause:        r.cause         || '',
+        sev:          r.sev           || 5,
+        occ:          r.occ           || 5,
+        det:          r.det           || 5,
+        action:       r.action        || '',
+        owner:        r.owner         || '',
+        dueDate:      r.due_date      || '',
+        pctComplete:  r.pct_complete  || 0,
+        currPC:       r.curr_pc       || '',
+        currDC:       r.curr_dc       || '',
+        prevAction:   r.prev_action   || '',
+        detAction:    r.det_action    || '',
+        actionStatus: r.action_status || 'open',
+        rsev:         r.rsev          || 0,
+        rocc:         r.rocc          || 0,
+        rdet:         r.rdet          || 0,
+        sourceFile:   r.source_file   || '',
+        sourcePage:   r.source_page   || '',
+        comment:      r.comment       || ''
+      });
+    });
+  } else {
+    // Fallback: migrate from old proj.rows blob if present
+    rows = (proj.rows || []).map(function(r){ return Object.assign({ _rowH: 52 }, r); });
+    if (rows.length > 0) scheduleSave(); // migrate to fmea_rows immediately
+  }
   fileTexts = []; fileNames = [];
   document.getElementById('bannerName').textContent = proj.name;
   document.getElementById('bannerDesc').textContent = proj.description || '';
@@ -104,28 +145,85 @@ window.goToDashboard = function () {
 };
 
 async function autoSave() {
-  if (!currentProjectId) return;
-  var el = document.getElementById('bannerSave');
+  if (!currentProjectId || !currentUserId) return;
   var localRowCount = rows.length;
 
   try {
+    // 1. Save project metadata (no rows blob)
     var proj = await getProject(currentProjectId);
     if (!proj) { setSaveStatus('❌ Save failed: project not found', true); return; }
-
     proj.hiddenCols = hiddenCols;
-    proj.rows = rows.map(function(r){ return { id:r.id, step:r.step, failureMode:r.failureMode, effect:r.effect, cause:r.cause, sev:r.sev, occ:r.occ, det:r.det, action:r.action, owner:r.owner, dueDate:r.dueDate, pctComplete:r.pctComplete, currPC:r.currPC, currDC:r.currDC, prevAction:r.prevAction, detAction:r.detAction, actionStatus:r.actionStatus, rsev:r.rsev, rocc:r.rocc, rdet:r.rdet, sourceFile:r.sourceFile, sourcePage:r.sourcePage, comment:r.comment, _rowH:r._rowH }; });
-
     await saveProject(proj);
 
-    // Verify: read back from Supabase and check row count matches
-    var verified = await getProject(currentProjectId);
-    var savedCount = verified && verified.rows ? verified.rows.length : -1;
+    // 2. Verify project exists in Supabase before upserting rows
+    var projInDb = await supabaseGet(
+      supabase.from('projects').select('id').eq('id', currentProjectId).eq('user_id', currentUserId).single()
+    );
+    if (!projInDb) {
+      setSaveStatus('❌ Save failed: project not saved to database. Check your connection.', true);
+      console.error('[autoSave] Project not found in Supabase after save attempt');
+      return;
+    }
+
+    // 3. Upsert all local rows into fmea_rows table
+    var upsertData = rows.map(function(r) {
+      return {
+        id:            r.id,
+        project_id:    currentProjectId,
+        user_id:       currentUserId,
+        step:          r.step          || '',
+        failure_mode:  r.failureMode   || '',
+        effect:        r.effect        || '',
+        cause:         r.cause         || '',
+        sev:           r.sev           || 5,
+        occ:           r.occ           || 5,
+        det:           r.det           || 5,
+        action:        r.action        || '',
+        owner:         r.owner         || '',
+        due_date:      r.dueDate       || null,
+        pct_complete:  r.pctComplete   || 0,
+        curr_pc:       r.currPC        || '',
+        curr_dc:       r.currDC        || '',
+        prev_action:   r.prevAction    || '',
+        det_action:    r.detAction     || '',
+        action_status: r.actionStatus  || 'open',
+        rsev:          r.rsev          || 0,
+        rocc:          r.rocc          || 0,
+        rdet:          r.rdet          || 0,
+        source_file:   r.sourceFile    || '',
+        source_page:   r.sourcePage    || '',
+        comment:       r.comment       || '',
+        updated_at:    new Date().toISOString()
+      };
+    });
+
+    if (upsertData.length > 0) {
+      await supabaseQuery(supabase.from('fmea_rows').upsert(upsertData));
+    }
+
+    // 3. Delete rows that were removed locally
+    var localIds = rows.map(function(r){ return r.id; });
+    var existing = await supabaseGet(
+      supabase.from('fmea_rows').select('id').eq('project_id', currentProjectId).eq('user_id', currentUserId)
+    );
+    if (existing && existing.length > 0) {
+      var toDelete = existing.map(function(r){ return r.id; }).filter(function(id){ return localIds.indexOf(id) === -1; });
+      if (toDelete.length > 0) {
+        await supabaseQuery(supabase.from('fmea_rows').delete().in('id', toDelete).eq('user_id', currentUserId));
+      }
+    }
+
+    // 4. Verify: read back count from fmea_rows
+    var verify = await supabaseGet(
+      supabase.from('fmea_rows').select('id').eq('project_id', currentProjectId).eq('user_id', currentUserId)
+    );
+    var savedCount = verify ? verify.length : -1;
 
     if (savedCount === localRowCount) {
       setSaveStatus('✅ Saved & verified — ' + localRowCount + ' rows in DB', false);
     } else {
-      setSaveStatus('⚠️ Save mismatch: local=' + localRowCount + ' DB=' + savedCount + '. Check Supabase column (see console).', true);
-      console.error('[autoSave] Row count mismatch. Local:', localRowCount, 'DB:', savedCount, 'Full verified:', verified);
+      setSaveStatus('⚠️ Mismatch: local=' + localRowCount + ' DB=' + savedCount, true);
+      console.error('[autoSave] Row count mismatch. Local:', localRowCount, 'DB:', savedCount);
     }
   } catch(e) {
     setSaveStatus('❌ Save error: ' + e.message, true);

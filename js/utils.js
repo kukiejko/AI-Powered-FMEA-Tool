@@ -1,6 +1,6 @@
 // ── Version & Metadata ──
-var APP_VERSION = '1.2.0';
-var COMPILE_TIME = '2026-04-28T08:06:52.9795346Z';
+var APP_VERSION = '1.2.1';
+var COMPILE_TIME = '2026-04-28T12:35:00.0000000Z';
 
 // ── Shared mutable state ──
 var currentUser = null;
@@ -127,6 +127,7 @@ var Storage = {
               team: proj.team,
               hidden_cols: proj.hiddenCols,
               rows: proj.rows || [],
+              created_at: proj.createdAt || new Date().toISOString(),
               updated_at: new Date().toISOString()
             })
           );
@@ -239,17 +240,22 @@ function setApiKey(key) {
   setApiKeyForProvider(getProvider(), key);
 }
 
-// Load API keys from Supabase into localStorage cache on login
-window.loadApiKeysFromSupabase = async function() {
-  var providers = ['claude', 'gemini', 'groq', 'ollama'];
-  for (var i = 0; i < providers.length; i++) {
-    var p = providers[i];
-    var k = 'apikey:' + (currentUser || '') + ':' + p;
-    var r = await Storage.get(k);
-    if (r && r.value) {
-      localStorage.setItem(k, r.value);
-    }
-  }
+// Load API keys from Supabase into localStorage cache — runs in background, never blocks login
+window.loadApiKeysFromSupabase = function() {
+  if (typeof supabase === 'undefined' || !currentUserId) return;
+  // Fetch all keys for this user in one query instead of 4 sequential requests
+  supabase.from('api_keys')
+    .select('provider, api_key_encrypted')
+    .eq('user_id', currentUserId)
+    .then(function(result) {
+      if (result.error || !result.data) return;
+      result.data.forEach(function(row) {
+        var k = 'apikey:' + (currentUser || '') + ':' + row.provider;
+        var decrypted = decryptApiKey(row.api_key_encrypted);
+        if (decrypted) localStorage.setItem(k, decrypted);
+      });
+    });
+  // returns immediately — no await
 };
 
 // ── Storage key helpers ──
