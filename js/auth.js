@@ -341,12 +341,27 @@ window.doLogout = async function() {
 
 window.checkAuthSession = async function() {
   try {
-    // Clean up OAuth hash from URL so it doesn't interfere with next login
+    var isOAuthCallback = window.location.hash.indexOf('access_token') !== -1 ||
+                          window.location.search.indexOf('code=') !== -1;
+
+    var user = await getCurrentUser();
+
+    // If returning from OAuth and session isn't ready yet, retry up to 3×
+    if (!user && isOAuthCallback) {
+      for (var attempt = 0; attempt < 3; attempt++) {
+        await new Promise(function(r) { setTimeout(r, 600); });
+        user = await getCurrentUser();
+        if (user) break;
+      }
+    }
+
+    // Clean up OAuth tokens from URL only after session is confirmed
     if (window.location.hash && window.location.hash.indexOf('access_token') !== -1) {
       history.replaceState(null, '', window.location.pathname);
     }
-
-    var user = await getCurrentUser();
+    if (window.location.search && window.location.search.indexOf('code=') !== -1) {
+      history.replaceState(null, '', window.location.pathname);
+    }
 
     if (user) {
       currentUser = user.email;
@@ -396,10 +411,8 @@ window.addEventListener('DOMContentLoaded', async function() {
     initVersionDisplay();
   }
 
-  // Check auth session
-  await checkAuthSession();
-
-  // Set up auth state listener
+  // Register listener FIRST so SIGNED_IN from OAuth callback isn't missed
+  // while checkAuthSession() is still awaiting
   onAuthStateChanged(async function(event, session) {
     console.log('Auth event:', event);
 
@@ -421,4 +434,8 @@ window.addEventListener('DOMContentLoaded', async function() {
       }
     }
   });
+
+  // Also check immediately (covers already-logged-in users and cases where
+  // INITIAL_SESSION fired synchronously before the listener was registered)
+  await checkAuthSession();
 });

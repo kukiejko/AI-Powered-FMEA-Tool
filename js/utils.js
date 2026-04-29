@@ -1,6 +1,6 @@
 // ── Version & Metadata ──
-var APP_VERSION = '1.2.4';
-var COMPILE_TIME = '2026-04-29T09:22:46.336948100Z';
+var APP_VERSION = '1.2.5';
+var COMPILE_TIME = '2026-04-29T00:00:00.000000000Z';
 
 // ── Shared mutable state ──
 var currentUser = null;
