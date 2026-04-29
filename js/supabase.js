@@ -242,17 +242,33 @@ window.encryptApiKey = function(key) {
   }
 };
 
-// AES-256 decryption
+// AES-256 decryption (with fallback for old base64 keys)
 window.decryptApiKey = function(encrypted) {
   if (!encrypted) return '';
   try {
-    var masterKey = window.getMasterKey();
-    var decrypted = CryptoJS.AES.decrypt(encrypted, masterKey);
-    var result = decrypted.toString(CryptoJS.enc.Utf8);
-    return result; // ✅ AES decrypted
+    // Check if it looks like AES encrypted (starts with "U2FsdGVkX1" which is AES salt prefix)
+    if (encrypted.indexOf('U2FsdGVkX1') === 0) {
+      // It's AES encrypted
+      var masterKey = window.getMasterKey();
+      var decrypted = CryptoJS.AES.decrypt(encrypted, masterKey);
+      var result = decrypted.toString(CryptoJS.enc.Utf8);
+      if (result) return result; // ✅ AES decrypted successfully
+    }
+
+    // Fallback: assume it's base64 (old data before AES)
+    try {
+      var result = atob(encrypted);
+      if (result && result.startsWith('gsk_') || result.startsWith('sk-') || result.startsWith('AIza')) {
+        return result; // ✅ Valid API key from base64
+      }
+    } catch (e) {
+      // Not valid base64 either
+    }
+
+    return ''; // Could not decrypt
   } catch (e) {
     console.error('Decryption error:', e);
-    // Fallback: try base64 (for old data)
+    // Last resort: try base64
     try {
       return atob(encrypted);
     } catch (e2) {
