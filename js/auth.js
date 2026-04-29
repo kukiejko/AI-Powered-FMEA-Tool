@@ -215,6 +215,9 @@ window.doLogin = async function() {
       currentUser = email;
       currentUserId = user.id;
 
+      // Store password in sessionStorage (RAM-only, for key encryption)
+      sessionStorage.setItem('_userPassword', password);
+
       // Store session info
       localStorage.setItem('currentUser', email);
       localStorage.setItem('currentUserId', user.id);
@@ -307,6 +310,7 @@ window.doLogout = async function() {
     // Clear local state
     currentUser = null;
     currentUserId = null;
+    sessionStorage.removeItem('_userPassword'); // Clear password from memory
     localStorage.removeItem('currentUser');
     localStorage.removeItem('currentUserId');
 
@@ -367,6 +371,7 @@ window.checkAuthSession = async function() {
       // User not logged in, show login screen
       currentUser = null;
       currentUserId = null;
+      sessionStorage.removeItem('_userPassword'); // Clear password from memory
       localStorage.removeItem('currentUser');
       localStorage.removeItem('currentUserId');
 
@@ -404,6 +409,7 @@ window.addEventListener('DOMContentLoaded', async function() {
       // User just signed out
       currentUser = null;
       currentUserId = null;
+      sessionStorage.removeItem('_userPassword'); // Clear password from memory
       localStorage.removeItem('currentUser');
       localStorage.removeItem('currentUserId');
       showScreen('screenLogin');

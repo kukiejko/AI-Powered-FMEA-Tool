@@ -222,20 +222,42 @@ window.supabaseGet = async function(query) {
 // ENCRYPTION HELPERS (for API keys)
 // ============================================================================
 
-// Simple encryption using base64 (for basic obfuscation)
-// In production, use proper encryption library
-window.encryptApiKey = function(key) {
-  if (!key) return '';
-  return btoa(key); // Base64 encode
+// Get master key from user's email + password (stored in sessionStorage)
+window.getMasterKey = function() {
+  var email = currentUser || 'default';
+  var password = sessionStorage.getItem('_userPassword') || 'default';
+  return CryptoJS.SHA256(email + password).toString();
 };
 
+// AES-256 encryption
+window.encryptApiKey = function(key) {
+  if (!key) return '';
+  try {
+    var masterKey = window.getMasterKey();
+    var encrypted = CryptoJS.AES.encrypt(key, masterKey).toString();
+    return encrypted; // ✅ AES encrypted
+  } catch (e) {
+    console.error('Encryption error:', e);
+    return btoa(key); // Fallback to base64
+  }
+};
+
+// AES-256 decryption
 window.decryptApiKey = function(encrypted) {
   if (!encrypted) return '';
   try {
-    return atob(encrypted); // Base64 decode
+    var masterKey = window.getMasterKey();
+    var decrypted = CryptoJS.AES.decrypt(encrypted, masterKey);
+    var result = decrypted.toString(CryptoJS.enc.Utf8);
+    return result; // ✅ AES decrypted
   } catch (e) {
     console.error('Decryption error:', e);
-    return '';
+    // Fallback: try base64 (for old data)
+    try {
+      return atob(encrypted);
+    } catch (e2) {
+      return '';
+    }
   }
 };
 
