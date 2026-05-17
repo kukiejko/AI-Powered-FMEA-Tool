@@ -1,5 +1,45 @@
 var reviewItems = [];
 
+// ── AI Response Cache ──
+function getCacheKey(docText, provider, model) {
+  return CryptoJS.SHA256(docText + '|' + provider + '|' + model).toString();
+}
+
+function getFileChecksum(rawText) {
+  return CryptoJS.SHA256(rawText).toString();
+}
+
+async function cacheLookup(cacheKey) {
+  if (!supabase || !currentUserId) return null;
+  try {
+    var result = await supabase
+      .from('ai_cache')
+      .select('result')
+      .eq('user_id', currentUserId)
+      .eq('cache_key', cacheKey)
+      .single();
+    return (result.data && !result.error) ? result.data.result : null;
+  } catch(e) {
+    return null;
+  }
+}
+
+async function cacheSave(cacheKey, fileChecksum, provider, model, result) {
+  if (!supabase || !currentUserId) return;
+  try {
+    await supabase.from('ai_cache').upsert({
+      user_id: currentUserId,
+      cache_key: cacheKey,
+      file_checksum: fileChecksum,
+      provider: provider,
+      model: model,
+      result: result
+    }, { onConflict: 'user_id,cache_key' });
+  } catch(e) {
+    console.warn('Cache save failed:', e);
+  }
+}
+
 function openReview(items) {
   reviewItems = items.map(function(it) {
     return { item: it, state: 'pending', edited: JSON.parse(JSON.stringify(it)) };
@@ -340,7 +380,7 @@ window.updateCostEstimator = updateCostEstimator;
 window.updateActiveModelBadge = updateActiveModelBadge;
 
 // ── Analyze ──
-window.analyze = function(){
+window.analyze = async function(){
   var combined = getContent();
   if(!combined){ setStatus('Please upload a file or paste text first.','error'); return; }
 
@@ -353,12 +393,28 @@ window.analyze = function(){
     return;
   }
 
-  setStatus('<span class="spinner"></span> Analyzing document...','loading');
-  document.getElementById('analyzeBtn').disabled = true;
-
   var analysisRange = typeof getAnalysisRange === 'function' ? getAnalysisRange() : null;
   var docText = analysisRange ? analysisRange.text : combined.substring(0, 150000);
   var docLimit = analysisRange ? analysisRange.end - analysisRange.start : 150000;
+
+  var modelId = provider === 'groq' ? getGroqModel()
+              : provider === 'ollama' ? (apiKey.trim() || 'mistral')
+              : provider === 'claude' ? 'claude-sonnet-4-20250514'
+              : 'gemini-1.5-flash';
+  var cacheKey = getCacheKey(docText, provider, modelId);
+
+  setStatus('<span class="spinner"></span> Checking cache...', 'loading');
+  document.getElementById('analyzeBtn').disabled = true;
+
+  var cached = await cacheLookup(cacheKey);
+  if (cached) {
+    setStatus('⚡ Loaded from cache (' + provider + ' · ' + modelId + '). Review before adding to FMEA →', '');
+    document.getElementById('analyzeBtn').disabled = false;
+    openReview(cached);
+    return;
+  }
+
+  setStatus('<span class="spinner"></span> Analyzing document...','loading');
 
   var prompt =
     'You are a senior FMEA engineer. Analyze the technical document below and identify failure modes.\n\n'+
@@ -460,6 +516,8 @@ window.analyze = function(){
       else{ items=[]; }
     }
     if(!items||!items.length){ setStatus('❌ AI returned 0 items. Check console for details.','error'); console.error('Parsed empty. Raw:',raw); return; }
+
+    cacheSave(cacheKey, getFileChecksum(combined), provider, modelId, items);
 
     var costMsg = '';
     if (provider === 'claude') {

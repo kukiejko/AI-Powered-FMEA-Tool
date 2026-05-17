@@ -229,6 +229,33 @@ CREATE POLICY "Users can delete own provider settings"
   ON public.provider_settings FOR DELETE
   USING (auth.uid() = user_id);
 
+-- 7. CREATE AI_CACHE TABLE
+CREATE TABLE IF NOT EXISTS public.ai_cache (
+  id serial PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  cache_key varchar(64) NOT NULL,
+  file_checksum varchar(64) NOT NULL,
+  provider varchar(50) NOT NULL,
+  model varchar(100) NOT NULL,
+  result jsonb NOT NULL,
+  created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, cache_key)
+);
+
+ALTER TABLE public.ai_cache ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own ai cache"
+  ON public.ai_cache FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own ai cache"
+  ON public.ai_cache FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own ai cache"
+  ON public.ai_cache FOR DELETE
+  USING (auth.uid() = user_id);
+
 -- ============================================================================
 -- INDEXES (for performance)
 -- ============================================================================
@@ -240,6 +267,8 @@ CREATE INDEX IF NOT EXISTS idx_incidents_project_id ON public.incidents(project_
 CREATE INDEX IF NOT EXISTS idx_incidents_user_id ON public.incidents(user_id);
 CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON public.api_keys(user_id);
 CREATE INDEX IF NOT EXISTS idx_provider_settings_user_id ON public.provider_settings(user_id);
+CREATE INDEX IF NOT EXISTS idx_ai_cache_user_id ON public.ai_cache(user_id);
+CREATE INDEX IF NOT EXISTS idx_ai_cache_key ON public.ai_cache(user_id, cache_key);
 
 -- ============================================================================
 -- SCHEMA COMPLETE
